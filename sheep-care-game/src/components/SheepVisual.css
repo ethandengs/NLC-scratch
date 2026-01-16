@@ -1,0 +1,265 @@
+.sheep-visual-comp {
+    position: relative;
+    width: 60px;
+    height: 50px;
+    /* Transform origin at bottom center for grounded feel */
+    transform-origin: bottom center;
+}
+
+/* --- Parts --- */
+
+.body {
+    position: absolute;
+    top: 15px;
+    left: 5px;
+    width: 50px;
+    height: 35px;
+    border-radius: 20px;
+    z-index: 2;
+    box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.head {
+    position: absolute;
+    top: 5px;
+    left: 40px;
+    /* Facing right default */
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    z-index: 3;
+}
+
+.leg {
+    position: absolute;
+    bottom: 0;
+    width: 6px;
+    height: 20px;
+    background-color: #333;
+    z-index: 1;
+    border-radius: 3px;
+}
+
+.leg-fl {
+    left: 15px;
+}
+
+.leg-fr {
+    left: 45px;
+}
+
+/* Front Right - visually close to head */
+.leg-bl {
+    left: 10px;
+    z-index: 0;
+    filter: brightness(0.8);
+}
+
+.leg-br {
+    left: 40px;
+    z-index: 0;
+    filter: brightness(0.8);
+}
+
+.tail {
+    position: absolute;
+    top: 20px;
+    left: 0px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.eye {
+    position: absolute;
+    top: 8px;
+    width: 4px;
+    height: 4px;
+    background: black;
+    border-radius: 50%;
+}
+
+.eye-r {
+    right: 5px;
+}
+
+.eye-l {
+    right: 12px;
+}
+
+.ear {
+    position: absolute;
+    top: 2px;
+    width: 8px;
+    height: 4px;
+    background: inherit;
+    border-radius: 10px;
+    filter: brightness(0.9);
+}
+
+.ear-r {
+    right: -2px;
+    transform: rotate(20deg);
+}
+
+.ear-l {
+    right: 15px;
+    transform: rotate(-20deg);
+}
+
+/* --- VFX --- */
+.bandage {
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    z-index: 5;
+    font-size: 20px;
+}
+
+.bubbles {
+    position: absolute;
+    top: -10px;
+    right: 0;
+    z-index: 5;
+    animation: floatUp 2s infinite;
+}
+
+/* --- Animations --- */
+
+/* IDLE */
+.sheep-visual-comp.idle .head {
+    animation: graze 4s infinite ease-in-out;
+}
+
+.sheep-visual-comp.idle .tail {
+    animation: wag 1s infinite ease-in-out;
+}
+
+@keyframes graze {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    30% {
+        transform: rotate(10deg) translateY(2px);
+    }
+
+    /* Head down */
+    50% {
+        transform: rotate(10deg) translateY(2px);
+    }
+
+    80% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes wag {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(-20deg);
+    }
+}
+
+/* WALKING */
+.sheep-visual-comp.walking .leg {
+    animation-duration: 0.6s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+.sheep-visual-comp.walking .leg-fl {
+    animation-name: walk-l;
+}
+
+.sheep-visual-comp.walking .leg-fr {
+    animation-name: walk-r;
+}
+
+.sheep-visual-comp.walking .leg-bl {
+    animation-name: walk-r;
+}
+
+/* Opposing visuals */
+.sheep-visual-comp.walking .leg-br {
+    animation-name: walk-l;
+}
+
+.sheep-visual-comp.walking .body {
+    animation: bounceBody 0.6s infinite ease-in-out;
+}
+
+.sheep-visual-comp.walking .head {
+    animation: bounceHead 0.6s infinite ease-in-out;
+}
+
+@keyframes walk-l {
+    0% {
+        transform: rotate(20deg) translateY(-2px);
+    }
+
+    50% {
+        transform: rotate(-20deg) translateY(0);
+    }
+
+    100% {
+        transform: rotate(20deg) translateY(-2px);
+    }
+}
+
+@keyframes walk-r {
+    0% {
+        transform: rotate(-20deg) translateY(0);
+    }
+
+    50% {
+        transform: rotate(20deg) translateY(-2px);
+    }
+
+    100% {
+        transform: rotate(-20deg) translateY(0);
+    }
+}
+
+@keyframes bounceBody {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+@keyframes bounceHead {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px) rotate(2deg);
+    }
+}
+
+/* SICK */
+.sheep-visual-comp.sick {
+    filter: grayscale(0.6) brightness(0.9);
+}
+
+.sheep-visual-comp.sick .head {
+    transform: rotate(15deg) translateY(5px);
+    /* Droopy head */
+    animation: none;
+}
