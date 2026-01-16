@@ -48,6 +48,41 @@ export const GameProvider = ({ children }) => {
         return { color, accessory };
     };
 
+    // --- Emotional Blackmail Messages ---
+    const GUILT_MESSAGES = {
+        login: [
+            "喲，大忙人終於想起這裡還有羊了？",
+            "你要是再晚點來，我就去隔壁牧場了。",
+            "我差點以為這是一個無人島。",
+            "你還記得我長什麼樣子嗎？",
+            "沒關係，我已經習慣等待了..."
+        ],
+        neglected: [
+            "你的良心不會痛嗎？",
+            "我很餓，但我不說。",
+            "隔壁的牧羊人好像比較溫柔...",
+            "反正我不重要... 🍂",
+            "去忙吧，不用管我死活。",
+            "希望你玩得開心... 即使我在受苦。",
+            "我的肚子在唱歌，你聽到了嗎？"
+        ],
+        critical: [
+            "我看見天堂的阿嬤了...",
+            "再見了，無情的世界。",
+            "若有來世，我想當隻石頭...",
+            "救... 救命...",
+            "這就是終點了嗎？"
+        ],
+        happy: [
+            "最喜歡你了！ ❤️",
+            "今天天氣真好～ ☀️",
+            "咩～ (開心)",
+            "你真是個好牧羊人！",
+            "又是美好的一天！"
+        ]
+    };
+    const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
     // --- Actions ---
     const sendVerificationEntry = async (email) => {
         try {
@@ -93,7 +128,6 @@ export const GameProvider = ({ children }) => {
         setSheep(decaySheep);
         setInventory(loadedData.inventory || []);
 
-        // Save local immediately to reflect decay
         if (currentUser) {
             localStorage.setItem(`sheep_game_data_${currentUser}`, JSON.stringify({
                 sheep: decaySheep,
@@ -116,16 +150,22 @@ export const GameProvider = ({ children }) => {
 
             if (result.status === 'success') {
                 setCurrentUser(name);
-                localStorage.setItem('sheep_current_session', name); // Persist Session
+                localStorage.setItem('sheep_current_session', name);
 
                 const loaded = result.data;
                 if (loaded && loaded.sheep) {
                     const diff = applyLoadedData(loaded);
-                    if (diff > 1) showMessage(`您離開了 ${Math.round(diff)} 小時，羊群狀態更新了...`);
+                    // Guilt Trip on Login
+                    if (diff > 12) {
+                        showMessage(`💔 ${getRandomItem(GUILT_MESSAGES.login)} (離開 ${Math.round(diff)} 小時)`);
+                    } else if (diff > 1) {
+                        showMessage(`您離開了 ${Math.round(diff)} 小時，羊群狀態更新了...`);
+                    } else {
+                        showMessage(`歡迎回來，${name}! 👋`);
+                    }
                 } else {
                     setSheep([]); setInventory([]);
                 }
-                showMessage(`歡迎回來，${name}! 👋`);
                 return { status: 'success' };
             } else {
                 showMessage(`❌ ${result.message}`);
@@ -137,18 +177,14 @@ export const GameProvider = ({ children }) => {
     const logout = async () => {
         await saveToCloud();
         setCurrentUser(null);
-        localStorage.removeItem('sheep_current_session'); // Clear Session
+        localStorage.removeItem('sheep_current_session');
         setSheep([]); setInventory([]);
     };
 
     const saveToCloud = async () => {
         if (!currentUser || !API_URL) return;
         const dataToSave = { sheep, inventory, lastSave: Date.now() };
-
-        // Save Local
         localStorage.setItem(`sheep_game_data_${currentUser}`, JSON.stringify(dataToSave));
-
-        // Save Cloud
         try {
             await fetch(API_URL, {
                 method: 'POST', keepalive: true,
@@ -158,9 +194,7 @@ export const GameProvider = ({ children }) => {
         } catch (e) { console.error("Auto-save failed", e); }
     };
 
-    // --- Boot Logic: Apply Decay if Restored from Session ---
     useEffect(() => {
-        // If we restored a user from localStorage, we should calculate decay based on the cached 'lastSave'
         if (currentUser) {
             const user = localStorage.getItem('sheep_current_session');
             if (user === currentUser) {
@@ -168,16 +202,13 @@ export const GameProvider = ({ children }) => {
                 if (cache) {
                     try {
                         const parsed = JSON.parse(cache);
-                        // Apply decay logic to the restored state
-                        // We can just re-set state using helper
                         const diff = applyLoadedData(parsed);
                         if (diff > 0.1) console.log(`Restored session decay: ${diff.toFixed(2)} hours`);
                     } catch (e) { }
                 }
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run once on mount
+    }, []);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -195,15 +226,15 @@ export const GameProvider = ({ children }) => {
                 return prevSheep.map(s => {
                     if (s.status === 'dead') return s;
 
-                    let { x, y, state, angle, direction } = s;
-                    if (y === undefined) y = Math.random() * 50;
-                    if (angle === undefined) angle = Math.random() * Math.PI * 2;
-                    const speed = 1.0;
+                    let { x, y, state, angle, direction, message, messageTimer } = s;
 
                     if (state === 'idle') {
                         if (Math.random() < 0.1) state = 'walking';
                     } else if (state === 'walking') {
                         if (Math.random() < 0.1) { state = 'idle'; } else {
+                            if (y === undefined) y = Math.random() * 50;
+                            if (angle === undefined) angle = Math.random() * Math.PI * 2;
+                            const speed = 1.0;
                             angle += (Math.random() - 0.5) * 0.5;
                             x += Math.cos(angle) * speed * 1.5;
                             y += Math.sin(angle) * speed;
@@ -226,7 +257,32 @@ export const GameProvider = ({ children }) => {
                         newStatus = 'sick';
                     }
 
-                    return { ...s, x, y, angle, state, direction, health: newHealth, status: newStatus };
+                    // --- Random Speech Bubble Logic ---
+                    let newMessage = message;
+                    let newTimer = messageTimer || 0;
+
+                    if (newTimer > 0) {
+                        newTimer -= 0.1;
+                        if (newTimer <= 0) newMessage = null;
+                    } else {
+                        // Chance to talk
+                        if (Math.random() < 0.003) {
+                            newTimer = 5;
+                            if (newHealth < 30) {
+                                newMessage = getRandomItem(GUILT_MESSAGES.critical);
+                            } else if (newHealth < 60) {
+                                newMessage = getRandomItem(GUILT_MESSAGES.neglected);
+                            } else if (Math.random() < 0.3) {
+                                newMessage = getRandomItem(GUILT_MESSAGES.happy);
+                            }
+                        }
+                    }
+
+                    return {
+                        ...s, x, y, angle, state, direction,
+                        health: newHealth, status: newStatus,
+                        message: newMessage, messageTimer: newTimer
+                    };
                 });
             });
         }, 100);

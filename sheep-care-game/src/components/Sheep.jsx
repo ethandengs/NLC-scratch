@@ -29,6 +29,13 @@ export const Sheep = ({ sheep, onPray, onShepherd, onSelect }) => {
                 {isGolden && ' 🌟'}
             </div>
 
+            {/* Speech Bubble (Emotional Blackmail) */}
+            {sheep.message && (
+                <div className="speech-bubble">
+                    {sheep.message}
+                </div>
+            )}
+
             {/* Visual Container (Flippable) */}
             <div
                 style={{
