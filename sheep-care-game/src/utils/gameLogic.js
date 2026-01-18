@@ -1,6 +1,7 @@
 
 // --- Constants ---
 const BOUNDS = { minX: 5, maxX: 95, minY: 0, maxY: 100 };
+const GRAVEYARD_RADIUS = 25; // Fan shape from Top-Left (x=0, y=100)
 const SHEEP_MESSAGES = {
     login: [
         "你終於回來了！好開心！✨",
@@ -40,6 +41,17 @@ const SHEEP_MESSAGES = {
         "咩～ (開心)",
         "你真是個好牧羊人！",
         "又是美好的一天！"
+    ],
+    dead: [
+        "救救我...我不想要消失... 😭",
+        "好黑好冷...誰能聽見我？ 🌑",
+        "不要遺忘我...求求你... 🙏",
+        "只有你能喚醒我...拜託...",
+        "我還不想就這樣結束... 💔",
+        "聽得到我的聲音嗎...？",
+        "請為我禱告...我好害怕...",
+        "相信奇蹟...請不要放棄我...",
+        "等待你的呼喚... 🕯️"
     ]
 };
 
@@ -68,6 +80,14 @@ export const sanitizeSheep = (s) => {
     if (typeof y !== 'number' || isNaN(y)) y = Math.random() * 50;
     if (typeof angle !== 'number' || isNaN(angle)) angle = Math.random() * Math.PI * 2;
 
+    // Ensure not spawning in graveyard or buffer zone (Radius + 20)
+    const distToGrave = Math.sqrt(x * x + (100 - y) * (100 - y));
+    if (s.status !== 'dead' && distToGrave < GRAVEYARD_RADIUS + 20) {
+        // Shift out
+        x += 20;
+        y -= 20;
+    }
+
     // Fix Visual
     const safeVisual = visual || generateVisuals();
 
@@ -79,12 +99,33 @@ export const sanitizeSheep = (s) => {
  * Handles movement, wall bouncing, health decay, and random messages.
  */
 export const calculateTick = (s) => {
-    if (s.status === 'dead') return s;
+    // Allow dead sheep to process message logic, but not movement/health
+    // if (s.status === 'dead') return s; // REMOVED to allow messages
 
     let { x, y, state, angle, direction, message, messageTimer } = s;
 
     // 1. Movement Logic
-    if (state === 'walking') {
+    if (s.status === 'dead') {
+        state = 'idle';
+        // Graveyard Logic: Fan shape from Top-Left (x=0, y=100)
+        const dist = Math.sqrt(x * x + (100 - y) * (100 - y));
+
+        if (dist > GRAVEYARD_RADIUS) {
+            // Teleport inside
+            const r = Math.random() * (GRAVEYARD_RADIUS - 5);
+            const theta = Math.random() * (Math.PI / 2); // 0 to 90 degrees
+            // Map to top-left quadrant relative to (0,100)
+            // X = r * sin(theta) (0 to +)
+            // Y = 100 - r * cos(theta) (100 down to 100-r)
+            x = r * Math.sin(theta);
+            y = 100 - r * Math.cos(theta);
+
+            angle = Math.PI / 2; // Face forward/down, static
+        } else {
+            // Already in graveyard? Force static precise lock (don't drift)
+            // Do not update x, y, angle
+        }
+    } else if (state === 'walking') {
         if (Math.random() < 0.05) state = 'idle';
         else {
             // Robust initialization (Double check even if sterilized on load)
@@ -96,6 +137,19 @@ export const calculateTick = (s) => {
             angle += (Math.random() - 0.5) * 0.5;
             x += Math.cos(angle) * 1.5;
             y += Math.sin(angle) * 1.5;
+
+            // Graveyard Collision Check (Fan Shape) with 20 unit buffer
+            const distToCorner = Math.sqrt(x * x + (100 - y) * (100 - y));
+            if (distToCorner < GRAVEYARD_RADIUS + 20) {
+                // Bounce back (Normal vector is direction from corner to sheep)
+                // Simply reverse for now or push away from corner
+                const angleFromCorner = Math.atan2(100 - y, 0 - x); // Vector to corner
+                // We want to go opposite
+                angle = Math.atan2(y - 100, x - 0);
+
+                x += Math.cos(angle) * 3.0; // Push out
+                y += Math.sin(angle) * 3.0;
+            }
 
             // Bounds Check
             if (x < BOUNDS.minX || x > BOUNDS.maxX) {
@@ -114,9 +168,11 @@ export const calculateTick = (s) => {
 
     // 2. Health Logic
     // Target: Max 20% per day (24h). 20 HP / 86400s = ~0.00023 HP/s
-    // Tick is 100ms (10/s), so ~0.000023 HP/tick
-    const decayRate = s.status === 'sick' ? 0.0002 : ((s.status === 'injured') ? 0.00005 : 0.00002);
-    const newHealth = Math.max(0, s.health - decayRate);
+    // Tick is 100ms (10/s), so ~0.000023 HP/tick is the MAX allowed speed.
+    // sick: 0.000023 (Max ~20%/day), injured: 0.00002, healthy: 0.000015 (Normal ~13%/day)
+    const decayRate = s.status === 'sick' ? 0.000023 : ((s.status === 'injured') ? 0.00002 : 0.000015);
+    // Don't decay if dead
+    const newHealth = s.status === 'dead' ? 0 : Math.max(0, s.health - decayRate);
     let newStatus = s.status;
 
     if (newHealth <= 0) {
@@ -134,11 +190,14 @@ export const calculateTick = (s) => {
     // Critical (HP<30): ~2% per tick (High priority)
     // Weak (HP<60): ~0.8% per tick (Medium)
     // Healthy: ~0.1% per tick (Low - Random ambient)
-    const speakChance = newHealth < 30 ? 0.02 : (newHealth < 60 ? 0.008 : 0.001);
+    // Dynamic speak chance
+    // Dead sheep speak less frequently (0.003 - closer to healthy but slightly more visible than background) to be haunting but not annoying
+    const speakChance = s.status === 'dead' ? 0.003 : (newHealth < 30 ? 0.02 : (newHealth < 60 ? 0.008 : 0.001));
 
     if (timer <= 0 && Math.random() < speakChance) {
         timer = 5;
-        if (newHealth < 30) msg = getRandomItem(SHEEP_MESSAGES.critical);
+        if (s.status === 'dead') msg = getRandomItem(SHEEP_MESSAGES.dead);
+        else if (newHealth < 30) msg = getRandomItem(SHEEP_MESSAGES.critical);
         else if (newHealth < 60) msg = getRandomItem(SHEEP_MESSAGES.neglected);
         else if (Math.random() < 0.3) msg = getRandomItem(SHEEP_MESSAGES.happy);
     }

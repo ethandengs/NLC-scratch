@@ -52,17 +52,16 @@ export const SheepList = ({ onSelect, onClose }) => {
                                         <div style={{ fontSize: '0.8rem', color: isDead ? '#999' : (isSick ? 'red' : 'green') }}>
                                             {isDead ? '已離世 (需復活)' : (isSick ? '生病中' : '健康')}
                                             {!isDead && ` | HP: ${Math.round(s.health)}%`}
+                                            {!isDead && <span style={{ color: '#ff9800', marginLeft: '5px' }}>| ❤️: {s.careLevel || 0}</span>}
                                         </div>
                                         {/* Message Preview */}
-                                        {!isDead && (
-                                            <div style={{
-                                                marginTop: '5px', background: '#f0f0f0', padding: '5px 10px',
-                                                borderRadius: '10px', fontSize: '0.85rem', color: '#555',
-                                                display: 'inline-block', fontStyle: 'italic'
-                                            }}>
-                                                💬 {s.message || getStableSheepMessage(s, isSick || s.health < 30 ? 'critical' : (s.health < 60 ? 'neglected' : 'happy'))}
-                                            </div>
-                                        )}
+                                        <div style={{
+                                            marginTop: '5px', background: '#f0f0f0', padding: '5px 10px',
+                                            borderRadius: '10px', fontSize: '0.85rem', color: '#555',
+                                            display: 'inline-block', fontStyle: 'italic'
+                                        }}>
+                                            💬 {s.message || getStableSheepMessage(s, isDead ? 'dead' : (isSick || s.health < 30 ? 'critical' : (s.health < 60 ? 'neglected' : 'happy')))}
+                                        </div>
                                     </div>
 
                                     <button

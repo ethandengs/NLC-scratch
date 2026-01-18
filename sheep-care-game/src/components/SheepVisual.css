@@ -428,3 +428,175 @@
         opacity: 0.8;
     }
 }
+
+/* --- TYPE: STRONG --- */
+.type-strong .sheep-body-group {
+    transform: scale(1.3);
+}
+
+.type-strong .sheep-body {
+    /* Slightly more muscular/solid look */
+    box-shadow:
+        12px -5px 0 -2px var(--sheep-color, #ffffff),
+        22px 5px 0 -2px var(--sheep-color, #ffffff),
+        -10px 4px 0 -3px var(--sheep-color, #ffffff),
+        10px 10px 0 -3px var(--sheep-color, #ffffff),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.ram-horn {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 3px solid #d4a373;
+    border-radius: 50%;
+    top: 6px;
+    z-index: 9;
+}
+
+.horn-left {
+    left: -8px;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    transform: rotate(-10deg);
+}
+
+.horn-right {
+    right: -8px;
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+    transform: rotate(10deg) scaleX(-1);
+}
+
+/* --- TYPE: HUMAN --- */
+/* Human Structure Container */
+.human-structure {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.human-body {
+    position: absolute;
+    top: 25px;
+    left: 15px;
+    width: 30px;
+    height: 35px;
+    background: var(--sheep-color, #ffffff);
+    border-radius: 10px;
+    box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 5;
+}
+
+.human-head {
+    position: absolute;
+    top: -5px;
+    left: 15px;
+    width: 30px;
+    height: 32px;
+    background: var(--sheep-color, #ffffff);
+    border-radius: 50%;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.human-head .sheep-face {
+    top: 10px;
+    left: 3px;
+    width: 24px;
+    height: 18px;
+    border-radius: 40%;
+}
+
+.human-arm {
+    position: absolute;
+    width: 8px;
+    height: 25px;
+    background: var(--sheep-color, #ffffff);
+    border-radius: 5px;
+    top: 28px;
+    z-index: 4;
+    transform-origin: top center;
+}
+
+.arm-l {
+    left: 8px;
+    transform: rotate(10deg);
+}
+
+.arm-r {
+    right: 8px;
+    transform: rotate(-10deg);
+}
+
+.human-leg {
+    position: absolute;
+    width: 9px;
+    height: 25px;
+    background: #333;
+    /* Dark legs/boots */
+    bottom: -5px;
+    z-index: 4;
+    border-radius: 4px;
+}
+
+.leg-l {
+    left: 18px;
+}
+
+.leg-r {
+    left: 33px;
+}
+
+/* Halo */
+.human-halo {
+    position: absolute;
+    top: -15px;
+    left: 5px;
+    width: 50px;
+    height: 15px;
+    border: 2px solid gold;
+    border-radius: 50%;
+    transform: rotate(-10deg);
+    opacity: 0.8;
+    box-shadow: 0 0 10px gold;
+    animation: halo-float 3s infinite ease-in-out;
+    z-index: 0;
+}
+
+@keyframes halo-float {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-10deg);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: translateY(-3px) rotate(-10deg);
+        opacity: 1;
+    }
+}
+
+/* Walking Animations for Human */
+.walking .human-arm.arm-l {
+    animation: leg-swing 0.8s infinite linear;
+}
+
+.walking .human-arm.arm-r {
+    animation: leg-swing-reverse 0.8s infinite linear;
+}
+
+.walking .human-leg.leg-l {
+    animation: leg-swing-reverse 0.8s infinite linear;
+    bottom: -5px;
+}
+
+.walking .human-leg.leg-r {
+    animation: leg-swing 0.8s infinite linear;
+    bottom: -5px;
+}
+
+.walking .human-body {
+    animation: walk-bob 0.8s infinite ease-in-out;
+}

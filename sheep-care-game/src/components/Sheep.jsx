@@ -22,7 +22,7 @@ export const Sheep = ({ sheep, onPray, onShepherd, onSelect }) => {
                 left: `${sheep.x}%`,
                 bottom: `${bottomPos}%`,
                 position: 'absolute',
-                transition: 'left 0.5s linear, bottom 0.5s linear',
+                transition: sheep.status === 'dead' ? 'none' : 'left 0.5s linear, bottom 0.5s linear',
                 zIndex: zIdx,
                 transform: `scale(${depthScale})`,
                 transformOrigin: 'bottom center'

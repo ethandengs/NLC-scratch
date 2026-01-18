@@ -73,7 +73,10 @@ function App() {
       {selectedSheepId && (
         <DebugEditor
           selectedSheepId={selectedSheepId}
-          onClose={() => setSelectedSheepId(null)}
+          onClose={() => {
+            setSelectedSheepId(null);
+            setShowList(true);
+          }}
         />
       )}
 

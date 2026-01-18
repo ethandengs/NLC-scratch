@@ -1,27 +1,26 @@
-
 export const SHEEP_TYPES = {
   LAMB: {
     id: 'lamb',
-    name: 'Little Lamb',
-    description: 'A small, innocent lamb looking for guidance.',
-    growthThreshold: 100,
-    nextStage: 'faithful',
+    name: '小羊',
+    description: '剛出生的小羊，需要細心呵護。',
+    growthThreshold: 100, // Grows after 100 care
+    nextStage: 'strong',
     icon: '🐑'
   },
-  FAITHFUL: {
-    id: 'faithful',
-    name: 'Faithful Sheep',
-    description: 'A grown sheep with a steady heart.',
-    growthThreshold: 300,
-    nextStage: 'golden',
+  STRONG: {
+    id: 'strong',
+    name: '強壯的羊',
+    description: '經歷了成長，變得強壯有力。',
+    growthThreshold: 300, // Grows after 300 more care
+    nextStage: 'human',
     icon: '🐏'
   },
-  GOLDEN: {
-    id: 'golden',
-    name: 'Golden Ram',
-    description: 'A radiant ram that brings blessings.',
+  HUMAN: {
+    id: 'human',
+    name: '榮耀的羊', // User said "Human Shaped", giving a poetic name but ID is 'human'
+    description: '充滿靈性，有了人的樣式。',
     growthThreshold: null, // Final stage
     nextStage: null,
-    icon: '🌟'
+    icon: '🧍'
   }
 };

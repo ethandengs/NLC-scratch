@@ -227,7 +227,28 @@ export const GameProvider = ({ children }) => {
             if (s.id !== id) return s;
 
             if (s.status === 'dead') {
-                const newProgress = (s.resurrectionProgress || 0) + 1;
+                const todayDate = new Date(today);
+                const lastDate = s.lastPrayedDate ? new Date(s.lastPrayedDate) : null;
+
+                // Calculate day difference
+                let diffDays = -1;
+                if (lastDate) {
+                    const diffTime = todayDate - lastDate;
+                    diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                }
+
+                // Logic:
+                // 1. Same day -> Show message, do nothing
+                if (diffDays === 0) {
+                    showMessage("今天已經為這隻小羊禱告過了，請明天再來！🙏");
+                    return s;
+                }
+
+                // 2. Consecutive day (diff === 1) or First time (diff === -1) -> Increment
+                // 3. Broken chain (diff > 1) -> Reset to 1
+                let newProgress = (diffDays === 1 || diffDays === -1) ? (s.resurrectionProgress || 0) + 1 : 1;
+
+                // Check resurrection
                 if (newProgress >= 5) {
                     showMessage(`✨ 奇蹟發生了！${s.name} 復活了！`);
                     return {
@@ -236,8 +257,9 @@ export const GameProvider = ({ children }) => {
                         lastPrayedDate: today, prayedCount: 1
                     };
                 } else {
-                    showMessage(`🙏 復活儀式進行中... (${newProgress}/5)`);
-                    return { ...s, resurrectionProgress: newProgress };
+                    const statusMsg = diffDays > 1 ? "禱告中斷了，重新開始..." : "迫切認領禱告進行中...";
+                    showMessage(`🙏 ${statusMsg} (${newProgress}/5)`);
+                    return { ...s, resurrectionProgress: newProgress, lastPrayedDate: today };
                 }
             }
 
@@ -247,7 +269,9 @@ export const GameProvider = ({ children }) => {
                 return s;
             }
 
-            const newHealth = Math.min(100, s.health + 20);
+            // Max increase 20% per day. 3 prayers allowed -> ~6.6% per prayer.
+            // Using 6 HP per prayer = 18 HP/day max.
+            const newHealth = Math.min(100, s.health + 6);
             const newStatus = (s.status !== 'healthy') ? 'healthy' : s.status;
             const newCare = s.careLevel + 10;
             let newType = s.type;
@@ -266,10 +290,14 @@ export const GameProvider = ({ children }) => {
 
     const shepherdSheep = (id) => { };
 
+    const deleteSheep = (id) => {
+        setSheep(prev => prev.filter(s => s.id !== id));
+    };
+
     return (
         <GameContext.Provider value={{
             currentUser, sheep, inventory, message,
-            adoptSheep, prayForSheep, shepherdSheep, updateSheep,
+            adoptSheep, prayForSheep, shepherdSheep, updateSheep, deleteSheep,
             sendVerificationEntry, registerUser, loginUser, logout, saveToCloud
         }}>
             {children}
