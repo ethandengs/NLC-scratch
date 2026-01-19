@@ -32,7 +32,6 @@ export const Login = () => {
                         <p style={{ color: '#555', marginBottom: '20px', lineHeight: '1.5' }}>
                             歡迎回到牧場！<br />
                             請使用 LINE 帳號直接登入<br />
-                            (無需記憶帳號密碼)
                         </p>
 
                         <button

@@ -16,7 +16,7 @@ function App() {
   const [showList, setShowList] = useState(false);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
 
-  // 3. Reset state when user changes
+  // Reset state when user changes
   useEffect(() => {
     setSelectedSheepId(null);
     setShowList(false);
@@ -26,7 +26,6 @@ function App() {
 
   // 0. Global Loading (Prevent empty blue screen during sync)
   if (isLoading) {
-    console.log("App Rendering: Loading State");
     return (
       <div style={{
         width: '100vw', height: '100vh',
@@ -35,7 +34,7 @@ function App() {
         background: '#f0faff', color: '#555'
       }}>
         <div style={{ fontSize: '3rem', marginBottom: '20px' }}>⏳</div>
-        <h2>正在同步羊群資料... (v1.1)</h2>
+        <h2>正在同步羊群資料...</h2>
         <p>Connecting to Cloud...</p>
       </div>
     );
