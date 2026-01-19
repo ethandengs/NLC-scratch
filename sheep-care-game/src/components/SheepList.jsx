@@ -10,8 +10,8 @@ export const SheepList = ({ onSelect, onClose }) => {
     const sortedSheep = [...(sheep || [])].sort((a, b) => a.id - b.id);
 
     return (
-        <div className="debug-editor-overlay">
-            <div className="simple-editor" style={{ width: '360px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="debug-editor-overlay" onClick={onClose}>
+            <div className="simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '360px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="editor-header">
                     <h3>📖 小羊圖鑑 ({sheep.length})</h3>
                     <button className="close-btn" onClick={onClose}>✖</button>

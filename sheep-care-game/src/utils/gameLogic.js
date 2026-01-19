@@ -208,12 +208,26 @@ export const calculateTick = (s) => {
     // sick: 0.000023 (Max ~20%/day), injured: 0.00002, healthy: 0.000015 (Normal ~13%/day)
     const decayRate = s.status === 'sick' ? 0.000023 : ((s.status === 'injured') ? 0.00002 : 0.000015);
     // Don't decay if dead
-    const newHealth = s.status === 'dead' ? 0 : Math.max(0, s.health - decayRate);
+    let newHealth = s.status === 'dead' ? 0 : Math.max(0, s.health - decayRate);
     let newStatus = s.status;
+    let newType = s.type;
+    let newCare = s.careLevel;
 
-    if (newHealth <= 0) {
-        newStatus = 'dead';
-        // Only return message if just died? context handles toast, we handle bubble
+    if (newHealth <= 0 && s.status !== 'dead') {
+        if (s.type === 'GLORY') {
+            newType = 'STRONG';
+            newHealth = 100;
+            newCare = 0;
+            newStatus = 'healthy'; // Survive
+        } else if (s.type === 'STRONG') {
+            newType = 'LAMB';
+            newHealth = 100;
+            newCare = 0;
+            newStatus = 'healthy'; // Survive
+        } else {
+            newStatus = 'dead';
+            newHealth = 0;
+        }
     } else if (newHealth < 50 && s.status === 'healthy' && Math.random() < 0.005) {
         newStatus = 'sick';
     }
@@ -222,17 +236,12 @@ export const calculateTick = (s) => {
     let timer = messageTimer > 0 ? messageTimer - 0.1 : 0;
     let msg = timer > 0 ? message : null;
 
-    // Dynamic speak chance: Weak sheep speak more often to remind shepherd
-    // Critical (HP<30): ~2% per tick (High priority)
-    // Weak (HP<60): ~0.8% per tick (Medium)
-    // Healthy: ~0.1% per tick (Low - Random ambient)
     // Dynamic speak chance
-    // Dead sheep speak less frequently (0.003 - closer to healthy but slightly more visible than background) to be haunting but not annoying
-    const speakChance = s.status === 'dead' ? 0.003 : (newHealth < 30 ? 0.02 : (newHealth < 60 ? 0.008 : 0.001));
+    const speakChance = newStatus === 'dead' ? 0.003 : (newHealth < 30 ? 0.02 : (newHealth < 60 ? 0.008 : 0.001));
 
     if (timer <= 0 && Math.random() < speakChance) {
         timer = 5;
-        if (s.status === 'dead') msg = getRandomItem(SHEEP_MESSAGES.dead);
+        if (newStatus === 'dead') msg = getRandomItem(SHEEP_MESSAGES.dead);
         else if (newHealth < 30) msg = getRandomItem(SHEEP_MESSAGES.critical);
         else if (newHealth < 60) msg = getRandomItem(SHEEP_MESSAGES.neglected);
         else if (Math.random() < 0.4) {
@@ -262,6 +271,7 @@ export const calculateTick = (s) => {
     return {
         ...s, x, y, angle, state, direction,
         health: newHealth, status: newStatus,
+        type: newType, careLevel: newCare,
         message: msg, messageTimer: timer
     };
 };

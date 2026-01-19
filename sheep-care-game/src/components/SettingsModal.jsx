@@ -16,8 +16,8 @@ export const SettingsModal = ({ onClose }) => {
     };
 
     return (
-        <div className="debug-editor-overlay">
-            <div className="debug-editor simple-editor" style={{ width: '350px' }}>
+        <div className="debug-editor-overlay" onClick={onClose}>
+            <div className="debug-editor simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '350px' }}>
                 <div className="editor-header">
                     <h3>⚙️ 設定</h3>
                     <button className="close-btn" onClick={onClose}>✖</button>

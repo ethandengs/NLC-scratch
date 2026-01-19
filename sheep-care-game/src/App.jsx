@@ -26,7 +26,7 @@ function App() {
   };
 
   const handleSelectFromList = (sheep) => {
-    setShowList(false);
+    // setShowList(false); // Changed: Keep list open in background to preserve scroll positions
     setSelectedSheepId(sheep.id);
   };
 
@@ -77,7 +77,7 @@ function App() {
           selectedSheepId={selectedSheepId}
           onClose={() => {
             setSelectedSheepId(null);
-            setShowList(true);
+            // setShowList(true); // Changed: Don't force list open, rely on existing state
           }}
         />
       )}

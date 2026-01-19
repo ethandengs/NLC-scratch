@@ -10,13 +10,14 @@ export const useGame = () => useContext(GameContext);
 export const GameProvider = ({ children }) => {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // --- Session Init ---
-    const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('sheep_current_session'));
+    // --- Session Init (SessionStorage for Auto-Logout on Close) ---
+    const [currentUser, setCurrentUser] = useState(() => sessionStorage.getItem('sheep_current_session'));
 
     const getLocalData = (key, fallback) => {
-        const user = localStorage.getItem('sheep_current_session');
+        const user = sessionStorage.getItem('sheep_current_session');
         if (user) {
-            const cache = localStorage.getItem(`sheep_game_data_${user}`);
+            // Use SessionStorage for Game Data (Clear Cache on Close)
+            const cache = sessionStorage.getItem(`sheep_game_data_${user}`);
             if (cache) {
                 try { return JSON.parse(cache)[key] || fallback; } catch (e) { }
             }
@@ -30,7 +31,7 @@ export const GameProvider = ({ children }) => {
     const [message, setMessage] = useState(null);
     const [weather, setWeather] = useState({ type: 'sunny', isDay: true, temp: 25 });
 
-    // User Location State (Persisted)
+    // User Location State (Persisted in LocalStorage - Device Preference)
     const [location, setLocation] = useState(() => {
         const saved = localStorage.getItem('sheep_user_location');
         return saved ? JSON.parse(saved) : { name: 'Taipei', lat: 25.0330, lon: 121.5654 };
@@ -47,9 +48,6 @@ export const GameProvider = ({ children }) => {
         if (result) {
             setLocation(result);
             showMessage(`所在地已更新為: ${result.name}`);
-            // Trigger immediate weather update logic handled by useEffect dep? 
-            // Better to just let the effect run or call fetch directly.
-            // Let's rely on effect dependency.
             return true;
         } else {
             showMessage("找不到該城市，請重試！");
@@ -117,29 +115,55 @@ export const GameProvider = ({ children }) => {
         const now = Date.now();
         const lastSave = loadedData.lastSave || now;
         const diffHours = (now - lastSave) / (1000 * 60 * 60);
-        // User requested max 20% drop per day (24 hours)
-        const decayAmount = (diffHours / 24) * 20;
 
         // Robust filtering & Logic
         const decaySheep = (loadedData.sheep || [])
             .filter(s => s && s.type && SHEEP_TYPES[s.type])
             .map(s => {
                 if (s.status === 'dead') return s;
+
+                // Calculate Decay based on Status (matching tick logic)
+                // Tick Sick: ~20%/day -> 0.833 / hr
+                // Tick Injured: ~17%/day -> 0.708 / hr
+                // Tick Healthy: ~13%/day -> 0.541 / hr
+                let ratePerHour = 0.541;
+                if (s.status === 'sick') ratePerHour = 0.833;
+                else if (s.status === 'injured') ratePerHour = 0.708;
+
+                const decayAmount = diffHours * ratePerHour;
+
                 // Decay
-                const newHealth = Math.max(0, s.health - decayAmount);
+                let newHealth = Math.max(0, s.health - decayAmount);
                 let newStatus = s.status;
-                if (newHealth <= 0) newStatus = 'dead';
-                else if (newHealth < 50 && s.status === 'healthy' && Math.random() < 0.5) newStatus = 'sick';
+                let newType = s.type;
+                let newCare = s.careLevel;
+
+                if (newHealth <= 0) {
+                    if (s.type === 'GLORY') {
+                        newType = 'STRONG';
+                        newHealth = 100;
+                        newCare = 0;
+                        newStatus = 'healthy';
+                    } else if (s.type === 'STRONG') {
+                        newType = 'LAMB';
+                        newHealth = 100;
+                        newCare = 0;
+                        newStatus = 'healthy';
+                    } else {
+                        newStatus = 'dead';
+                        newHealth = 0;
+                    }
+                } else if (newHealth < 50 && s.status === 'healthy' && Math.random() < 0.5) newStatus = 'sick';
 
                 // Sanitize & Return
-                return sanitizeSheep({ ...s, health: newHealth, status: newStatus });
+                return sanitizeSheep({ ...s, health: newHealth, status: newStatus, type: newType, careLevel: newCare });
             });
 
         setSheep(decaySheep);
         setInventory(loadedData.inventory || []);
 
         if (targetUser) {
-            localStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
+            sessionStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
                 sheep: decaySheep,
                 inventory: loadedData.inventory || [],
                 lastSave: now
@@ -160,7 +184,7 @@ export const GameProvider = ({ children }) => {
 
             if (result.status === 'success') {
                 setCurrentUser(name);
-                localStorage.setItem('sheep_current_session', name);
+                sessionStorage.setItem('sheep_current_session', name);
 
                 const loaded = result.data;
                 if (loaded && loaded.sheep) {
@@ -193,7 +217,8 @@ export const GameProvider = ({ children }) => {
     const logout = async () => {
         await saveToCloud();
         setCurrentUser(null);
-        localStorage.removeItem('sheep_current_session');
+        sessionStorage.removeItem('sheep_current_session');
+        sessionStorage.removeItem(`sheep_game_data_${currentUser}`); // Explicitly Clear Cache
         setSheep([]); setInventory([]);
         // Force reload on logout too for safety
         window.location.reload();
@@ -202,7 +227,8 @@ export const GameProvider = ({ children }) => {
     const saveToCloud = async () => {
         if (!currentUser || !API_URL) return;
         const dataToSave = { sheep, inventory, lastSave: Date.now() };
-        localStorage.setItem(`sheep_game_data_${currentUser}`, JSON.stringify(dataToSave));
+        // Save to SessionStorage (Short term)
+        sessionStorage.setItem(`sheep_game_data_${currentUser}`, JSON.stringify(dataToSave));
         try {
             await fetch(API_URL, {
                 method: 'POST', keepalive: true,
@@ -214,9 +240,9 @@ export const GameProvider = ({ children }) => {
 
     useEffect(() => {
         if (currentUser) {
-            const user = localStorage.getItem('sheep_current_session');
+            const user = sessionStorage.getItem('sheep_current_session');
             if (user === currentUser) {
-                const cache = localStorage.getItem(`sheep_game_data_${currentUser}`);
+                const cache = sessionStorage.getItem(`sheep_game_data_${currentUser}`);
                 if (cache) {
                     try {
                         const parsed = JSON.parse(cache);
@@ -313,9 +339,14 @@ export const GameProvider = ({ children }) => {
                 if (newProgress >= 5) {
                     showMessage(`✨ 奇蹟發生了！${s.name} 復活了！`);
                     return {
-                        ...s, status: 'healthy', health: 100,
+                        ...s,
+                        status: 'healthy',
+                        health: 100,
+                        type: 'LAMB', // Reset to Lamb
+                        careLevel: 0,
                         resurrectionProgress: 0,
-                        lastPrayedDate: today, prayedCount: 1
+                        lastPrayedDate: today,
+                        prayedCount: 0 // Reset count to 0 so they can be cared for immediately
                     };
                 } else {
                     const statusMsg = diffDays > 1 ? "禱告中斷了，重新開始..." : "迫切認領禱告進行中...";

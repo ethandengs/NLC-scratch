@@ -40,8 +40,8 @@ export const AddSheepModal = ({ onConfirm, onCancel }) => {
     };
 
     return (
-        <div className="debug-editor-overlay">
-            <div className="simple-editor" style={{ width: '350px', padding: '20px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="debug-editor-overlay" onClick={onCancel}>
+            <div className="simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '350px', padding: '20px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="editor-header">
                     <h3>{isBatchMode ? '批量新增小羊 🐑' : '新增小羊 🐑'}</h3>
                     <button className="close-btn" onClick={onCancel}>✖</button>

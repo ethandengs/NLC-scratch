@@ -57,6 +57,23 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
         // onClose(); // Removed to allow viewing changes
     };
 
+    const handleCancel = () => {
+        // Reset to original target data
+        setName(target.name);
+        setNote(target.note || '');
+        const mat = target.spiritualMaturity || '';
+        const match = mat.match(/^(.+?)(?:\s*\((.+)\))?$/);
+        if (match) {
+            setSLevel(match[1] || '');
+            setSStage(match[2] || '');
+        } else {
+            setSLevel(mat);
+            setSStage('');
+        }
+        setIsEditing(false);
+        setLocalMsg('');
+    };
+
     const handleResetHealth = () => {
         updateSheep(target.id, { health: 100, status: 'healthy' });
     };
@@ -116,8 +133,8 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
     );
 
     return (
-        <div className="debug-editor-overlay">
-            <div className="debug-editor simple-editor" style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="debug-editor-overlay" onClick={onClose}>
+            <div className="debug-editor simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
                 <div className="editor-header">
                     <h3>{isDead ? '🪦 墓碑' : '📝 小羊資料'}</h3>
                     <button className="close-btn" onClick={onClose}>✖</button>
@@ -132,7 +149,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                             onChange={(e) => setName(e.target.value)}
                             maxLength={10}
                             placeholder="名字..."
-                            disabled={!isEditing || isDead}
+                            disabled={!isEditing}
                         />
                     </div>
 
@@ -159,7 +176,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                         <select
                             value={sLevel}
                             onChange={(e) => setSLevel(e.target.value)}
-                            disabled={!isEditing || isDead}
+                            disabled={!isEditing}
                             style={{ width: '100%', padding: '8px', borderRadius: '8px', marginBottom: '5px' }}
                         >
                             <option value="">-- 請選擇 --</option>
@@ -172,7 +189,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                             <select
                                 value={sStage}
                                 onChange={(e) => setSStage(e.target.value)}
-                                disabled={!isEditing || isDead}
+                                disabled={!isEditing}
                                 style={{ width: '100%', padding: '8px', borderRadius: '8px' }}
                             >
                                 <option value="學習中">學習中</option>
@@ -197,7 +214,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                             rows={3}
                             style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
                             placeholder={isDead ? "寫下對牠的負擔..." : "記錄這隻小羊的狀況..."}
-                            disabled={!isEditing && !isDead} // Allow editing note if dead? Probably not if global edit. let's stick to global isEditing.
+                            disabled={!isEditing}
                         />
                     </div>
 
@@ -247,7 +264,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                                             note: '',
                                             lastPrayedDate: null
                                         });
-                                        setSelectedType('LAMB');
+                                        // setSelectedType('LAMB');
                                         setNote('');
                                         setResetConfirmOpen(false);
                                         onClose();
@@ -307,19 +324,48 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                     {/* Main Actions (Hide if any confirm is open) */}
                     {!deleteConfirmOpen && !resetConfirmOpen && (
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                                onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                                style={{
-                                    flex: 1.5, height: '36px', padding: '0 5px',
-                                    background: isEditing ? (hasChanges ? '#4caf50' : '#ccc') : '#2196f3',
-                                    color: 'white', border: 'none', borderRadius: '8px',
-                                    cursor: (isEditing && !hasChanges) ? 'not-allowed' : 'pointer',
-                                    whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
-                                }}
-                                disabled={isEditing && !hasChanges}
-                            >
-                                {isEditing ? '儲存' : '變更資料'}
-                            </button>
+                            {!isEditing ? (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    style={{
+                                        flex: 1.5, height: '36px', padding: '0 5px',
+                                        background: '#2196f3',
+                                        color: 'white', border: 'none', borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
+                                    }}
+                                >
+                                    變更資料
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={!hasChanges}
+                                        style={{
+                                            flex: 1, height: '36px', padding: '0 5px',
+                                            background: hasChanges ? '#4caf50' : '#ccc',
+                                            color: 'white', border: 'none', borderRadius: '8px',
+                                            cursor: hasChanges ? 'pointer' : 'not-allowed',
+                                            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        儲存
+                                    </button>
+                                    <button
+                                        onClick={handleCancel}
+                                        style={{
+                                            flex: 1, height: '36px', padding: '0 5px',
+                                            background: '#29b6f6',
+                                            color: 'white', border: 'none', borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        取消
+                                    </button>
+                                </>
+                            )}
 
                             <button
                                 onClick={() => setResetConfirmOpen(true)}
