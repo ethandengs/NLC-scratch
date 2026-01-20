@@ -26,9 +26,9 @@ export const GameProvider = ({ children }) => {
 
     const getLocalData = (key, fallback) => {
         // We only load data if we have a valid session user
-        const storedUser = sessionStorage.getItem('sheep_current_session'); // store LineID now? Or name? Let's store LineID.
+        const storedUser = localStorage.getItem('sheep_current_session');
         if (storedUser) {
-            const cache = sessionStorage.getItem(`sheep_game_data_${storedUser}`);
+            const cache = localStorage.getItem(`sheep_game_data_${storedUser}`);
             if (cache) {
                 try { return JSON.parse(cache)[key] || fallback; } catch (e) { }
             }
@@ -93,9 +93,9 @@ export const GameProvider = ({ children }) => {
 
     // --- Session Restoration (Fix for Refresh) ---
     useEffect(() => {
-        const storedUserId = sessionStorage.getItem('sheep_current_session');
+        const storedUserId = localStorage.getItem('sheep_current_session');
         if (storedUserId) {
-            const cachedData = sessionStorage.getItem(`sheep_game_data_${storedUserId}`);
+            const cachedData = localStorage.getItem(`sheep_game_data_${storedUserId}`);
             if (cachedData) {
                 try {
                     const parsed = JSON.parse(cachedData);
@@ -185,7 +185,10 @@ export const GameProvider = ({ children }) => {
         // userId, displayName are from LINE
         setLineId(userId);
         setCurrentUser(displayName);
-        sessionStorage.setItem('sheep_current_session', userId); // Store LineID as session key
+        localStorage.setItem('sheep_current_session', userId); // Store LineID as session key
+
+        // Clean up old sessionStorage to free memory
+        try { sessionStorage.clear(); } catch (e) { }
 
         showMessage(`設定羊群中... (Hi, ${displayName})`);
 
@@ -253,8 +256,8 @@ export const GameProvider = ({ children }) => {
         setCurrentUser(null);
         setNickname(null);
         setLineId(null);
-        sessionStorage.removeItem('sheep_current_session');
-        if (lineId) sessionStorage.removeItem(`sheep_game_data_${lineId}`);
+        localStorage.removeItem('sheep_current_session');
+        if (lineId) localStorage.removeItem(`sheep_game_data_${lineId}`);
         setSheep([]); setInventory([]);
         setIsDataLoaded(false); // Reset
         window.location.reload();
@@ -314,7 +317,7 @@ export const GameProvider = ({ children }) => {
 
         // Cache Locally
         if (targetUser) {
-            sessionStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
+            localStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
                 sheep: decaySheep,
                 inventory: loadedData.inventory || [],
                 settings: { notify: loadedData.settings?.notify || false }, // Save setting
@@ -342,11 +345,14 @@ export const GameProvider = ({ children }) => {
         // Determnie nickname to save
         const nicknameToSave = overrides.nickname !== undefined ? overrides.nickname : nickname;
 
-        sessionStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({
-            ...gameData,
-            nickname: nicknameToSave,
-            name: currentUser
-        }));
+        // Verify we have loaded data before potentially overwriting
+        if (isDataLoaded) {
+            localStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({
+                ...gameData,
+                nickname: nicknameToSave,
+                name: currentUser
+            }));
+        }
 
         try {
             const { error } = await supabase
@@ -391,17 +397,27 @@ export const GameProvider = ({ children }) => {
         }
     };
 
-    // Auto-Save Logic
+    // Auto-Save Logic (Visibility Change + BeforeUnload)
     useEffect(() => {
-        if (!lineId) return;
-        const handleUnload = () => { saveToCloud(); };
-        window.addEventListener('beforeunload', handleUnload);
+        if (!lineId || !isDataLoaded) return;
+
+        const handleSave = () => { saveToCloud(); };
+
+        // Save using event handlers
+        window.addEventListener('beforeunload', handleSave);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') handleSave();
+        });
+
+        // Debounced Save (Efficiency)
         const timeoutId = setTimeout(() => { saveToCloud(); }, 2000);
+
         return () => {
             clearTimeout(timeoutId);
-            window.removeEventListener('beforeunload', handleUnload);
+            window.removeEventListener('beforeunload', handleSave);
+            document.removeEventListener('visibilitychange', handleSave);
         };
-    }, [sheep, inventory, lineId]);
+    }, [sheep, inventory, lineId, isDataLoaded]);
 
     // Game Loop
     useEffect(() => {
