@@ -122,39 +122,69 @@
   animation-delay: 10s;
 }
 
-/* Weather States */
-.sky.sunny {
+/* Weather States (Parent based) */
+.sunny .sky {
   background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
 }
 
-.sky.cloudy {
+.cloudy .sky {
   background: linear-gradient(to bottom, #757f9a 0%, #d7dde8 100%);
 }
 
-.sky.rain {
+.rain .sky {
   background: linear-gradient(to bottom, #203a43 0%, #2c5364 100%);
 }
 
-.sky.storm {
+.storm .sky {
   background: linear-gradient(to bottom, #0f2027 0%, #203a43 100%);
 }
 
-.sky.snow {
+.snow .sky {
   background: linear-gradient(to bottom, #e6dada 0%, #274046 100%);
 }
 
 /* Night Mode Override */
-.sky.night {
+.night .sky {
   background: linear-gradient(to bottom, #0f0c29 0%, #302b63 50%, #24243e 100%);
 }
 
-.sky.night .cloud-extra {
+.night .cloud-extra {
   opacity: 0.3;
 }
 
-.sky.night .sun {
+.night .sun {
   display: none;
 }
+
+/* Grass Weather States */
+.grass {
+  transition: filter 1s ease, background 1s ease;
+}
+
+.night .grass {
+  filter: brightness(0.5) hue-rotate(20deg);
+  /* Darker Night */
+}
+
+.rain .grass {
+  filter: grayscale(0.3) brightness(0.8);
+}
+
+.storm .grass {
+  filter: grayscale(0.6) brightness(0.5) contrast(1.2);
+}
+
+.snow .grass {
+  background: linear-gradient(to top, #e0f7fa 0%, #fff 100%);
+  /* Snowy ground */
+}
+
+.night.snow .grass {
+  background: linear-gradient(to top, #2c3e50 0%, #bdc3c7 100%);
+  /* Snowy night */
+  filter: none;
+}
+
 
 /* Sun */
 .sun {

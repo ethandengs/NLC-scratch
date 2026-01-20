@@ -74,8 +74,8 @@ export const Field = ({ onSelectSheep }) => {
     }, []);
 
     return (
-        <div className="field-container">
-            <div className={`sky ${weather?.type || 'sunny'} ${weather?.isDay ? 'day' : 'night'}`}>
+        <div className={`field-container ${weather?.type || 'sunny'} ${weather?.isDay ? 'day' : 'night'}`}>
+            <div className="sky">
                 {/* Extra Clouds */}
                 <div className="cloud-extra c1"></div>
                 <div className="cloud-extra c2"></div>
