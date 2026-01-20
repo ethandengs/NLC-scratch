@@ -1,13 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { SHEEP_TYPES } from '../data/sheepData';
 import { sanitizeSheep, calculateTick, generateVisuals, getSheepMessage } from '../utils/gameLogic';
 
 const GameContext = createContext();
 
 export const useGame = () => useContext(GameContext);
-
-import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -354,7 +353,8 @@ export const GameProvider = ({ children }) => {
                 .from('users')
                 .upsert({
                     id: lineId,
-                    game_data: currentData,
+                    id: lineId,
+                    game_data: gameData,
                     nickname: nicknameToSave,
                     name: currentUser, // Ensure name is updated
                     last_login: new Date().toISOString()
@@ -500,8 +500,6 @@ export const GameProvider = ({ children }) => {
     const deleteMultipleSheep = (ids) => {
         setSheep(prev => prev.filter(s => !ids.includes(s.id)));
     };
-    const registerUser = () => { }; // Deprecated
-    const loginUser = () => { }; // Deprecated
 
     const updateNickname = (name) => {
         setNickname(name);
@@ -513,9 +511,10 @@ export const GameProvider = ({ children }) => {
             currentUser, nickname, setNickname, lineId, isAdmin,
             sheep, inventory, message, weather,
             location, updateUserLocation,
-            adoptSheep, interactWithMember,
-            checkCode, loginWithLine, logout,
-            prayForSheep, fixDuplicateIds, deleteMultipleSheep,
+            adoptSheep,
+            loginWithLine, logout,
+            prayForSheep, deleteMultipleSheep,
+            saveToCloud, // Exposed
             notificationEnabled, toggleNotification // Exposed
         }}>
             {children}
