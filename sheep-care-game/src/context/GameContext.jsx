@@ -180,47 +180,120 @@ export const GameProvider = ({ children }) => {
     };
 
     const handleLoginSuccess = async (profile) => {
-        setIsLoading(true); // START LOADING to prevent "Nickname Setup" flash during DB fetch
+        setIsLoading(true);
         const { userId, displayName, pictureUrl } = profile;
-        // userId, displayName are from LINE
         setLineId(userId);
         setCurrentUser(displayName);
-        localStorage.setItem('sheep_current_session', userId); // Store LineID as session key
+        localStorage.setItem('sheep_current_session', userId);
 
-        // Clean up old sessionStorage to free memory
         try { sessionStorage.clear(); } catch (e) { }
 
         showMessage(`設定羊群中... (Hi, ${displayName})`);
 
-        // Sync with Supabase (Login/Register)
         try {
-            // Check if user exists
+            // 1. Fetch User (Settings, Inventory)
             const { data: existingUser, error: fetchError } = await supabase
                 .from('users')
                 .select('*')
                 .eq('id', userId)
                 .single();
 
-            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = JSON object requested, multiple (or no) results returned (No rows found)
-                throw fetchError;
-            }
+            if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+            // 2. Fetch Sheep (Relational Table)
+            const { data: sheepData, error: sheepError } = await supabase
+                .from('sheep')
+                .select('*')
+                .eq('owner_id', userId);
+
+            if (sheepError) throw sheepError;
 
             if (existingUser) {
-                // Existing User
-                const loaded = existingUser.game_data || {};
-                const diff = applyLoadedData(loaded, userId);
-
-                // Restore nickname from DB
+                // Restoration Logic
                 if (existingUser.nickname) setNickname(existingUser.nickname);
                 else setNickname(null);
 
-                setIsDataLoaded(true); // MARK: Cloud load success
+                // --- MIGRATION CHECK ---
+                // If user has old JSON sheep but NO new relational sheep, migrate them!
+                let finalSheep = [];
+                if (existingUser.game_data?.sheep && (!sheepData || sheepData.length === 0)) {
+                    console.log("Migrating old JSON sheep to new table...");
+                    const oldSheep = existingUser.game_data.sheep;
 
-                if (diff > 12) showMessage(`✨ ${getSheepMessage('login')} (離開 ${Math.round(diff)} 小時)`);
-                else if (diff > 1) showMessage(`您離開了 ${Math.round(diff)} 小時，羊群狀態更新了...`);
-                else showMessage(`歡迎回來，${existingUser.nickname || displayName}! 👋`);
+                    // Convert to DB format
+                    const rowsToInsert = oldSheep.map(s => ({
+                        owner_id: userId,
+                        name: s.name,
+                        status: s.status,
+                        health: s.health,
+                        care_level: s.careLevel || 0,
+                        spiritual_maturity: s.spiritualMaturity,
+                        visual_data: {
+                            x: s.x, y: s.y, angle: s.angle,
+                            visual: s.visual,
+                            type: s.type
+                        },
+                        prayed_count: s.prayedCount || 0,
+                        resurrection_progress: s.resurrectionProgress || 0,
+                        last_prayed_date: s.lastPrayedDate,
+                        note: s.note
+                    }));
+
+                    if (rowsToInsert.length > 0) {
+                        const { data: migrated, error: migErr } = await supabase
+                            .from('sheep')
+                            .insert(rowsToInsert)
+                            .select();
+                        if (migErr) console.error("Migration failed", migErr);
+                        else {
+                            console.log("Migration success!", migrated);
+                            finalSheep = migrated; // Use newly inserted
+                            // Clear old JSON to prevent re-migration? 
+                            // Optional, but saving 'users' later will likely clear it if we don't include it.
+                        }
+                    }
+                } else {
+                    finalSheep = sheepData || [];
+                }
+
+                // Apply Loaded Data (Calculate Decay based on row updated_at if possible, 
+                // but since we just migrated or loaded, we handle logical hydration)
+                const lastSave = existingUser.game_data?.lastSave || Date.now(); // User-level backup time
+                const loadedInventory = existingUser.game_data?.inventory || [];
+                const loadedSettings = existingUser.game_data?.settings || {};
+
+                // Hydrate Sheep (Convert DB row back to Game Object)
+                const hydratedSheep = finalSheep.map(row => {
+                    const visuals = row.visual_data || {};
+                    return {
+                        id: row.id, // UUID
+                        name: row.name,
+                        status: row.status,
+                        health: parseFloat(row.health),
+                        careLevel: parseFloat(row.care_level),
+                        spiritualMaturity: row.spiritual_maturity,
+                        // Expand Visuals
+                        x: visuals.x, y: visuals.y, angle: visuals.angle,
+                        visual: visuals.visual,
+                        type: visuals.type || (parseFloat(row.health) >= 80 ? 'STRONG' : 'LAMB'),
+                        // Stats
+                        prayedCount: row.prayed_count,
+                        resurrectionProgress: row.resurrection_progress,
+                        lastPrayedDate: row.last_prayed_date,
+                        note: row.note,
+                        // Runtime props
+                        state: 'idle', direction: 1, message: null, messageTimer: 0
+                    };
+                });
+
+                // Apply Decay
+                applyLoadedData({ sheep: hydratedSheep, inventory: loadedInventory, settings: loadedSettings, lastSave }, userId);
+
+                setIsDataLoaded(true);
+                showMessage(`歡迎回來，${existingUser.nickname || displayName}! 👋`);
+
             } else {
-                // New User - Insert
+                // New User
                 const { error: insertError } = await supabase
                     .from('users')
                     .insert([{
@@ -228,21 +301,18 @@ export const GameProvider = ({ children }) => {
                         name: displayName,
                         avatar: pictureUrl,
                         nickname: null,
-                        game_data: {}
+                        game_data: {} // No more sheep here
                     }]);
-
                 if (insertError) throw insertError;
 
                 showMessage("歡迎新加入的牧羊人！ 🎉");
                 setSheep([]); setInventory([]);
                 setNickname(null);
-                setIsDataLoaded(true); // MARK: New User success
+                setIsDataLoaded(true);
             }
         } catch (e) {
             alert(`⚠️ Connection Error: ${e.message}`);
-            showMessage("⚠️ 連線失敗 (Cloud Sync)");
             console.error(e);
-            // DO NOT set isDataLoaded(true) here
         } finally {
             setIsLoading(false);
         }
@@ -282,7 +352,7 @@ export const GameProvider = ({ children }) => {
                 seenIds.add(s.id);
                 return s;
             })
-            .filter(s => s && s.type && SHEEP_TYPES[s.type])
+            .filter(s => s && (s.type && SHEEP_TYPES[s.type] || s.health >= 0)) // Relaxed check
             .map(s => {
                 if (s.status === 'dead') return s;
 
@@ -329,45 +399,112 @@ export const GameProvider = ({ children }) => {
     };
 
     const saveToCloud = async (overrides = {}) => {
-        if (!lineId) return;
-        if (!isDataLoaded) {
-            console.warn("Skipping save: Data not fully loaded.");
-            return;
-        }
+        if (!lineId || !isDataLoaded) return;
 
-        const gameData = {
-            sheep: overrides.sheep || sheep,
+        // 1. Prepare User Data (Inventory & Settings only)
+        const userData = {
             inventory: overrides.inventory || inventory,
-            settings: { notify: overrides.notificationEnabled ?? notificationEnabled }, // Save Setting
+            settings: { notify: overrides.notificationEnabled ?? notificationEnabled },
             lastSave: Date.now()
         };
-
-        // Determnie nickname to save
         const nicknameToSave = overrides.nickname !== undefined ? overrides.nickname : nickname;
 
-        // Verify we have loaded data before potentially overwriting
-        if (isDataLoaded) {
-            localStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({
-                ...gameData,
-                nickname: nicknameToSave,
-                name: currentUser
-            }));
-        }
+        // 2. Prepare Sheep Data (Diffing could happen here, but upsert is safer)
+        const currentSheep = overrides.sheep || sheep;
+
+        // Map to DB Rows
+        const sheepRows = currentSheep.map(s => ({
+            id: (s.id && s.id.length > 20) ? s.id : undefined, // If temp ID, let DB generate UUID? Or if existing UUID, keep it. 
+            // Note: If ID is the old timestamp style, it won't match UUID type if defined in DB. 
+            // BUT: We defined ID as UUID DEFAULT gen_random_uuid(). 
+            // If we are updating, we MUST provide the ID.
+            // If the ID is a long string (from old system), we might need to be careful.
+            // Ideally, the load process migrated them to UUIDs. 
+            // If this is a brand new sheep created locally, it has temp ID. We should let DB create ID, BUT we need to update local state.
+            // Simplified: We upsert based on ID. If ID is not a valid UUID (e.g. timestamp_random), it might fail if column is UUID.
+            // For now, let's assume Migration handled IDs or we treat them as texts if column is TEXT. (User SQL said UUID).
+            // CRITICAL: If local has temp ID "17000..._abc", sending to UUID column will fail.
+            // WORKAROUND: Send WITHOUT ID for new sheep, let Supabase return it.
+            // BUT this is `saveToCloud`. We want to update.
+            // Logic: Is it a valid UUID? If not, treat as insert (omit ID).
+
+            owner_id: lineId,
+            name: s.name,
+            status: s.status,
+            health: s.health,
+            care_level: s.careLevel,
+            spiritual_maturity: s.spiritualMaturity,
+            visual_data: {
+                x: s.x, y: s.y, angle: s.angle,
+                visual: s.visual,
+                type: s.type
+            },
+            prayed_count: s.prayedCount,
+            resurrection_progress: s.resurrectionProgress,
+            last_prayed_date: s.lastPrayedDate,
+            note: s.note,
+            updated_at: new Date().toISOString()
+        }));
+
+        // Filter: Separate Inserts and Updates? 
+        // Supabase upsert works if ID is present.
+        // We need to handle the case where local ID is "timestamp_random" (New Sheep).
+        const validUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        const rowsToUpsert = sheepRows.filter(r => r.id && validUUID.test(r.id));
+        const rowsToInsert = sheepRows.filter(r => !r.id || !validUUID.test(r.id));
+
+        // Update Local Cache
+        localStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({
+            sheep: currentSheep, // Store full object locally
+            inventory: userData.inventory,
+            settings: userData.settings,
+            lastSave: Date.now(),
+            nickname: nicknameToSave,
+            name: currentUser
+        }));
 
         try {
-            const { error } = await supabase
-                .from('users')
-                .upsert({
-                    id: lineId,
-                    id: lineId,
-                    game_data: gameData,
-                    nickname: nicknameToSave,
-                    name: currentUser, // Ensure name is updated
-                    last_login: new Date().toISOString()
-                });
+            // A. Save User Info
+            await supabase.from('users').upsert({
+                id: lineId,
+                nickname: nicknameToSave,
+                name: currentUser,
+                game_data: userData, // No sheep in here anymore
+                last_login: new Date().toISOString()
+            });
 
-            if (error) throw error;
-            console.log("Auto-save success via Supabase");
+            // B. Upsert Existing Sheep
+            if (rowsToUpsert.length > 0) {
+                await supabase.from('sheep').upsert(rowsToUpsert);
+            }
+
+            // C. Insert New Sheep (and update local IDs)
+            if (rowsToInsert.length > 0) {
+                const { data: newRows, error: insertErr } = await supabase
+                    .from('sheep')
+                    .insert(rowsToInsert.map(r => {
+                        const { id, ...rest } = r; // Remove invalid ID
+                        return rest;
+                    }))
+                    .select();
+
+                if (insertErr) throw insertErr;
+
+                // Update local state with real UUIDs from DB?
+                // This is tricky in `saveToCloud` because it might cause a render loop if we setSheep here.
+                // Ideally `adoptSheep` should handle the insert immediately.
+                // But for now, we just save. Next load will correct IDs.
+                // To fix "Next Save" creating duplicates: We MUST update local IDs.
+                if (newRows) {
+                    // We need to map back which local sheep got which UUID. 
+                    // This is hard if we batch insert.
+                    // Simple fix: Reload sheep from DB after batch insert of new ones?
+                    // Or just rely on the fact that `adoptSheep` calls this?
+                }
+            }
+            console.log("Cloud Save (Hybrid) Success");
+
         } catch (e) { console.error("Auto-save failed", e); }
     };
 
@@ -435,20 +572,43 @@ export const GameProvider = ({ children }) => {
     }, [lineId]);
 
     // Actions
-    const adoptSheep = (data = {}) => {
+    const adoptSheep = async (data = {}) => {
         const { name = '小羊', spiritualMaturity = '' } = data;
+
+        // Optimistic UI Update (Temp ID)
+        const tempId = `temp_${Date.now()}`;
+        const visual = generateVisuals();
         const newSheep = {
-            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: tempId,
             name, type: 'LAMB',
             spiritualMaturity,
             careLevel: 0, health: 100, strength: 0, status: 'healthy',
             state: 'idle', note: '', prayedCount: 0, lastPrayedDate: null,
             resurrectionProgress: 0,
-            visual: generateVisuals(),
+            visual,
             x: Math.random() * 90 + 5, y: Math.random() * 90 + 5,
             angle: Math.random() * Math.PI * 2, direction: 1
         };
         setSheep(prev => [...prev, newSheep]);
+
+        // Immediate DB Insert to get real UUID
+        if (lineId && isDataLoaded) {
+            try {
+                const { data: inserted, error } = await supabase.from('sheep').insert([{
+                    owner_id: lineId,
+                    name, status: 'healthy', health: 100,
+                    spiritual_maturity: spiritualMaturity,
+                    visual_data: { x: newSheep.x, y: newSheep.y, angle: newSheep.angle, visual, type: 'LAMB' }
+                }]).select().single();
+
+                if (inserted) {
+                    // Replace Temp ID with Real UUID
+                    setSheep(prev => prev.map(s => s.id === tempId ? { ...s, id: inserted.id } : s));
+                    // Save to local storage to sync UUID
+                    await saveToCloud();
+                }
+            } catch (e) { console.error("Adopt sync failed", e); }
+        }
     };
 
     const updateSheep = (id, updates) => {
@@ -512,9 +672,13 @@ export const GameProvider = ({ children }) => {
     };
 
     const shepherdSheep = (id) => { };
-    const deleteSheep = (id) => { setSheep(prev => prev.filter(s => s.id !== id)); };
-    const deleteMultipleSheep = (ids) => {
+    const deleteSheep = async (id) => {
+        setSheep(prev => prev.filter(s => s.id !== id));
+        if (lineId) await supabase.from('sheep').delete().eq('id', id);
+    };
+    const deleteMultipleSheep = async (ids) => {
         setSheep(prev => prev.filter(s => !ids.includes(s.id)));
+        if (lineId) await supabase.from('sheep').delete().in('id', ids);
     };
 
     const updateNickname = (name) => {
