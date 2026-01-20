@@ -48,6 +48,12 @@ export const Guide = ({ onClose }) => {
                         <li><strong>使用說明:</strong> 請使用 LINE 帳號登入，系統會自動備份您的羊群資料。</li>
                     </ul>
 
+                    <h4>5. 提醒與通知 (Bell)</h4>
+                    <ul>
+                        <li><strong>鈴鐺按鈕 (右上方):</strong> 點擊鈴鐺可開啟/關閉牧羊提醒。</li>
+                        <li><strong>開啟後:</strong> 系統將在適當時間提醒您回來關心羊群的狀況。</li>
+                    </ul>
+
                     <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
                         <em>"信心若沒有行為就是死的。"</em>
                     </p>

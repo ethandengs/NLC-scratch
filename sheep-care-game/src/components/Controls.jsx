@@ -1,13 +1,10 @@
-
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { AddSheepModal } from './AddSheepModal';
-import { SettingsModal } from './SettingsModal';
 
-export const Controls = ({ onOpenList, isCollapsed, onToggleCollapse }) => {
-    const { adoptSheep, sheep, currentUser, nickname, saveToCloud, notificationEnabled, toggleNotification } = useGame(); // Removed logout here
+export const Controls = ({ onOpenList }) => {
+    const { adoptSheep } = useGame();
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
 
     const handleConfirmAdd = (data) => {
         if (Array.isArray(data)) {
@@ -18,96 +15,54 @@ export const Controls = ({ onOpenList, isCollapsed, onToggleCollapse }) => {
         setShowAddModal(false);
     };
 
-
-
     return (
-        <div className={`controls-container ${isCollapsed ? 'collapsed' : ''}`}>
-            {/* Notification Toggle */}
-            <button
-                className="control-btn"
-                onClick={toggleNotification}
-                style={{ background: notificationEnabled ? '#ffeb3b' : '#e0e0e0', color: '#000' }}
-            >
-                {notificationEnabled ? '🔔' : '🔕'}
-            </button>
+        <div className="controls-container">
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
 
-            {/* Toggle Button */}
-            <button
-                className="collapse-toggle-btn"
-                onClick={onToggleCollapse}
-                title={isCollapsed ? "展開工具列" : "收起工具列"}
-            >
-                {isCollapsed ? '🔼' : '🔽'}
-            </button>
+                {/* Sheep List Button */}
+                <button
+                    className="action-btn"
+                    style={{
+                        background: '#fff',
+                        color: '#333',
+                        border: '1px solid #ccc',
+                        width: '60px', height: '60px',
+                        borderRadius: '20px', // Square-ish with rounded corners (Mobile App Dock style)
+                        fontSize: '1.8rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 0 #9e9e9e'
+                    }}
+                    onClick={onOpenList}
+                    title="羊群名冊"
+                >
+                    📋
+                </button>
 
-            {!isCollapsed && (
-                <>
-                    <div className="stats-panel" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <div style={{ fontSize: '0.9rem' }}>👋 嗨，牧羊人 <strong>{nickname || currentUser}</strong></div>
-                        <div><strong>目前羊隻:</strong> {(sheep || []).length} 隻 🐑</div>
-                    </div>
+                {/* Add Sheep Button (Primary Action) */}
+                <button
+                    className="action-btn adopt-btn"
+                    onClick={() => setShowAddModal(true)}
+                    style={{
+                        background: '#66bb6a', /* Green */
+                        color: 'white',
+                        minWidth: '160px',
+                        height: '60px',
+                        borderRadius: '30px',
+                        fontSize: '1.2rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        boxShadow: '0 4px 0 #388e3c'
+                    }}
+                >
+                    <span style={{ fontSize: '1.5rem' }}>➕</span> 新增小羊
+                </button>
 
-                    {/* Sheep List Button */}
-                    <button
-                        className="action-btn"
-                        style={{
-                            background: '#fff',
-                            color: '#333',
-                            border: '1px solid #ccc',
-                            marginRight: '10px',
-                            fontSize: '1.2rem',
-                            padding: '8px 12px'
-                        }}
-                        onClick={onOpenList}
-                        title="羊群名冊"
-                    >
-                        📋
-                    </button>
+            </div>
 
-                    <button
-                        className="action-btn adopt-btn"
-                        onClick={() => setShowAddModal(true)}
-                        style={{
-                            background: '#66bb6a',
-                            color: 'white',
-                            minWidth: '120px'
-                        }}
-                    >
-                        新增小羊 🐑
-                    </button>
-
-
-
-                    <button
-                        onClick={() => setShowSettings(true)}
-                        style={{
-                            background: '#fff',
-                            color: '#555',
-                            border: '2px solid #ccc',
-                            borderRadius: '50%',
-                            width: '40px',
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1.2rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                        }}
-                        title="設定"
-                    >
-                        ⚙️
-                    </button>
-                </>
-            )}
             {showAddModal && (
                 <AddSheepModal
                     onConfirm={handleConfirmAdd}
                     onCancel={() => setShowAddModal(false)}
                 />
-            )}
-            {showSettings && (
-                <SettingsModal onClose={() => setShowSettings(false)} />
             )}
         </div>
     );

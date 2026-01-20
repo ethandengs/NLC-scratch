@@ -8,21 +8,21 @@ import { Guide } from './components/Guide';
 import { Login } from './components/Login';
 import { NicknameSetup } from './components/NicknameSetup';
 import { SheepList } from './components/SheepList';
+import { SettingsModal } from './components/SettingsModal';
 import './App.css';
 
 function App() {
-  const { currentUser, message, isLoading, nickname } = useGame();
+  const { currentUser, message, isLoading, nickname, notificationEnabled, toggleNotification, sheep } = useGame();
   const [selectedSheepId, setSelectedSheepId] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
   const [showList, setShowList] = useState(false);
-  const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
-
+  const [showSettings, setShowSettings] = useState(false);
   // Reset state when user changes
   useEffect(() => {
     setSelectedSheepId(null);
     setShowList(false);
     setShowGuide(false);
-    setIsControlsCollapsed(false);
+    setShowSettings(false);
   }, [currentUser]);
 
   // 0. Global Loading (Prevent empty blue screen during sync)
@@ -65,24 +65,49 @@ function App() {
     <div className="game-container" key={currentUser}>
       {message && <div key={message} className="toast-message">{message}</div>}
 
-      {/* Help Button */}
-      <button
-        className="icon-btn"
-        style={{
-          position: 'absolute', top: '10px', right: '10px', zIndex: 100,
-          width: '40px', height: '40px', fontSize: '1.5rem', opacity: 1
-        }}
-        onClick={() => setShowGuide(true)}
-      >
-        📖
-      </button>
+      {/* --- HUD: Top Left User Info --- */}
+      <div className="hud-left">
+        <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#555' }}>
+          👤 {nickname || currentUser}
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#777', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          🐑 {sheep?.length || 0} 隻
+        </div>
+      </div>
+
+      {/* --- HUD: Top Right System Buttons --- */}
+      <div className="hud-right">
+        {/* Bell */}
+        <button
+          className="hud-btn"
+          style={{ background: notificationEnabled ? '#fff' : '#eee' }}
+          onClick={toggleNotification}
+          title={notificationEnabled ? "關閉提醒" : "開啟提醒"}
+        >
+          {notificationEnabled ? '🔔' : '🔕'}
+        </button>
+
+        {/* Guide */}
+        <button
+          className="hud-btn"
+          onClick={() => setShowGuide(true)}
+        >
+          📖
+        </button>
+
+        {/* Settings (Moved from Controls) */}
+        <button
+          className="hud-btn"
+          onClick={() => setShowSettings(true)}
+        >
+          ⚙️
+        </button>
+      </div>
 
       <Field onSelectSheep={handleSelectSheep} />
 
       <Controls
         onOpenList={() => setShowList(true)}
-        isCollapsed={isControlsCollapsed}
-        onToggleCollapse={() => setIsControlsCollapsed(!isControlsCollapsed)}
       />
 
       {/* Modals */}
@@ -105,6 +130,10 @@ function App() {
 
       {showGuide && (
         <Guide onClose={() => setShowGuide(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
