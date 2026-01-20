@@ -409,25 +409,15 @@ export const GameProvider = ({ children }) => {
         };
         const nicknameToSave = overrides.nickname !== undefined ? overrides.nickname : nickname;
 
-        // 2. Prepare Sheep Data (Diffing could happen here, but upsert is safer)
+        // 2. Prepare Sheep Data
         const currentSheep = overrides.sheep || sheep;
 
-        // Map to DB Rows
-        const sheepRows = currentSheep.map(s => ({
-            id: (s.id && s.id.length > 20) ? s.id : undefined, // If temp ID, let DB generate UUID? Or if existing UUID, keep it. 
-            // Note: If ID is the old timestamp style, it won't match UUID type if defined in DB. 
-            // BUT: We defined ID as UUID DEFAULT gen_random_uuid(). 
-            // If we are updating, we MUST provide the ID.
-            // If the ID is a long string (from old system), we might need to be careful.
-            // Ideally, the load process migrated them to UUIDs. 
-            // If this is a brand new sheep created locally, it has temp ID. We should let DB create ID, BUT we need to update local state.
-            // Simplified: We upsert based on ID. If ID is not a valid UUID (e.g. timestamp_random), it might fail if column is UUID.
-            // For now, let's assume Migration handled IDs or we treat them as texts if column is TEXT. (User SQL said UUID).
-            // CRITICAL: If local has temp ID "17000..._abc", sending to UUID column will fail.
-            // WORKAROUND: Send WITHOUT ID for new sheep, let Supabase return it.
-            // BUT this is `saveToCloud`. We want to update.
-            // Logic: Is it a valid UUID? If not, treat as insert (omit ID).
+        // Filter out temporary IDs from CLOUD sync (they are handled by adoptSheep's direct insert)
+        const persistentSheep = currentSheep.filter(s => s.id && !s.id.toString().startsWith('temp_'));
 
+        // Map to DB Rows
+        const sheepRows = persistentSheep.map(s => ({
+            id: s.id, // Should be valid UUID
             owner_id: lineId,
             name: s.name,
             status: s.status,
@@ -446,17 +436,12 @@ export const GameProvider = ({ children }) => {
             updated_at: new Date().toISOString()
         }));
 
-        // Filter: Separate Inserts and Updates? 
-        // Supabase upsert works if ID is present.
-        // We need to handle the case where local ID is "timestamp_random" (New Sheep).
         const validUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const rowsToUpsert = sheepRows.filter(r => validUUID.test(r.id));
 
-        const rowsToUpsert = sheepRows.filter(r => r.id && validUUID.test(r.id));
-        const rowsToInsert = sheepRows.filter(r => !r.id || !validUUID.test(r.id));
-
-        // Update Local Cache
+        // Update Local Cache (Store EVERYTHING, including temp, so UI doesn't flicker on reload if offline)
         localStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({
-            sheep: currentSheep, // Store full object locally
+            sheep: currentSheep,
             inventory: userData.inventory,
             settings: userData.settings,
             lastSave: Date.now(),
@@ -470,40 +455,16 @@ export const GameProvider = ({ children }) => {
                 id: lineId,
                 nickname: nicknameToSave,
                 name: currentUser,
-                game_data: userData, // Correct: No sheep here.
+                game_data: userData,
                 last_login: new Date().toISOString()
             });
 
-            // B. Upsert Existing Sheep
+            // B. Upsert Existing Sheep (Valid UUIDs only)
             if (rowsToUpsert.length > 0) {
                 await supabase.from('sheep').upsert(rowsToUpsert);
             }
 
-            // C. Insert New Sheep (and update local IDs)
-            if (rowsToInsert.length > 0) {
-                const { data: newRows, error: insertErr } = await supabase
-                    .from('sheep')
-                    .insert(rowsToInsert.map(r => {
-                        const { id, ...rest } = r; // Remove invalid ID
-                        return rest;
-                    }))
-                    .select();
-
-                if (insertErr) throw insertErr;
-
-                // Update local state with real UUIDs from DB?
-                // This is tricky in `saveToCloud` because it might cause a render loop if we setSheep here.
-                // Ideally `adoptSheep` should handle the insert immediately.
-                // But for now, we just save. Next load will correct IDs.
-                // To fix "Next Save" creating duplicates: We MUST update local IDs.
-                if (newRows) {
-                    // We need to map back which local sheep got which UUID. 
-                    // This is hard if we batch insert.
-                    // Simple fix: Reload sheep from DB after batch insert of new ones?
-                    // Or just rely on the fact that `adoptSheep` calls this?
-                }
-            }
-            console.log("Cloud Save (Hybrid) Success");
+            console.log("Cloud Save Success");
 
         } catch (e) { console.error("Auto-save failed", e); }
     };
@@ -612,9 +573,9 @@ export const GameProvider = ({ children }) => {
 
                 if (inserted) {
                     // Replace Temp ID with Real UUID
+                    console.log("Adopt synced, ID:", inserted.id);
                     setSheep(prev => prev.map(s => s.id === tempId ? { ...s, id: inserted.id } : s));
-                    // Save to local storage to sync UUID
-                    await saveToCloud();
+                    // The next auto-save will pick up this new valid UUID.
                 }
             } catch (e) { console.error("Adopt sync failed", e); }
         }
@@ -680,7 +641,6 @@ export const GameProvider = ({ children }) => {
         }));
     };
 
-    const shepherdSheep = (id) => { };
     const deleteSheep = async (id) => {
         setSheep(prev => prev.filter(s => s.id !== id));
         if (lineId) await supabase.from('sheep').delete().eq('id', id);
@@ -702,7 +662,7 @@ export const GameProvider = ({ children }) => {
             location, updateUserLocation,
             adoptSheep, updateSheep,
             loginWithLine, logout,
-            prayForSheep, deleteSheep, deleteMultipleSheep, shepherdSheep,
+            prayForSheep, deleteSheep, deleteMultipleSheep,
             saveToCloud, forceLoadFromCloud, // Exposed
             notificationEnabled, toggleNotification, // Exposed
             updateNickname // Exposed

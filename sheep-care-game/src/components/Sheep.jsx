@@ -3,7 +3,7 @@ import React from 'react';
 import { SheepVisual } from './SheepVisual';
 import { SHEEP_TYPES } from '../data/sheepData';
 
-export const Sheep = ({ sheep, onPray, onShepherd, onSelect }) => {
+export const Sheep = ({ sheep, onPray, onSelect }) => {
     const isGolden = sheep.type === 'GOLDEN';
 
     // Map y (0-100) to bottom % (0-70 roughly, grass is 70%)
@@ -64,18 +64,6 @@ export const Sheep = ({ sheep, onPray, onShepherd, onSelect }) => {
             {/* Actions (Non-Flipped) */}
             <div className="sheep-actions">
                 {/* Health Bar Removed */}
-
-                {isGolden && (
-                    <button
-                        className="icon-btn shepherd-trigger"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onShepherd(sheep.id);
-                        }}
-                    >
-                        🌿
-                    </button>
-                )}
             </div>
         </div>
     );

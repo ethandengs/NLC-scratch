@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import { Sheep } from './Sheep';
 
 export const Field = ({ onSelectSheep }) => {
-    const { sheep, prayForSheep, shepherdSheep, message, weather } = useGame();
+    const { sheep, prayForSheep, message, weather } = useGame();
 
     // Generate static decorations once
     const decorations = useMemo(() => {
@@ -176,7 +176,6 @@ export const Field = ({ onSelectSheep }) => {
                         key={s.id}
                         sheep={s}
                         onPray={prayForSheep}
-                        onShepherd={shepherdSheep}
                         onSelect={onSelectSheep}
                     />
                 ))}
