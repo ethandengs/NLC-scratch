@@ -26,6 +26,7 @@ export const getWeather = async (lat = 25.0330, lon = 121.5654) => { // Default 
         // Or handle separately. Let's return both.
         return {
             type: weatherType,
+            code: code, // Raw WMO code
             temp: data.current_weather.temperature,
             isDay: isDay === 1
         };

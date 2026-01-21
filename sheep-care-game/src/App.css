@@ -133,6 +133,55 @@
   z-index: 3;
 }
 
+/* --- Mountain Weather States --- */
+
+/* Night: Darker, Blue-shifted */
+.night .hill {
+  transition: filter 1s ease, background 1s ease;
+  filter: brightness(0.5) hue-rotate(20deg);
+}
+
+/* Rain: Dim, Desaturated */
+.rain .hill {
+  filter: grayscale(0.3) brightness(0.8);
+}
+
+/* Storm: Dark, High Contrast, Grey */
+.storm .hill {
+  filter: grayscale(0.6) brightness(0.5) contrast(1.2);
+}
+
+/* Snow: Turn to White/Ice Mountains (Overrides Green) */
+.snow .h-1 {
+  background: radial-gradient(circle at 50% 100%, #B2EBF2 0%, #E0F7FA 100%);
+}
+
+.snow .h-2 {
+  background: radial-gradient(circle at 50% 90%, #80DEEA 0%, #B2DFDB 100%);
+}
+
+.snow .h-3 {
+  background: radial-gradient(circle at 50% 100%, #4DD0E1 0%, #80CBC4 100%);
+}
+
+/* Night + Snow: Cool Blue-Grey */
+.night.snow .hill {
+  filter: brightness(0.7) hue-rotate(10deg);
+  /* specific tint for night snow */
+}
+
+.night.snow .h-1 {
+  background: radial-gradient(circle at 50% 100%, #546E7A 0%, #78909C 100%);
+}
+
+.night.snow .h-2 {
+  background: radial-gradient(circle at 50% 90%, #455A64 0%, #607D8B 100%);
+}
+
+.night.snow .h-3 {
+  background: radial-gradient(circle at 50% 100%, #37474F 0%, #546E7A 100%);
+}
+
 
 
 .cloud-extra {
@@ -309,26 +358,8 @@
   width: 2px;
   height: 20px;
   background: rgba(255, 255, 255, 0.6);
-  animation: fall 1s linear infinite;
-}
-
-/* Specific Rain Speeds per Layer */
-.weather-layer.back .rain-drop {
-  animation-duration: 0.8s;
-  height: 10px;
-  width: 1px;
-}
-
-.weather-layer.mid .rain-drop {
-  animation-duration: 0.6s;
-  height: 15px;
-  width: 2px;
-}
-
-.weather-layer.front .rain-drop {
-  animation-duration: 0.4s;
-  height: 25px;
-  width: 3px;
+  animation: fall 2.5s linear infinite;
+  /* Slower rain base */
 }
 
 /* Snow Drops */
@@ -336,65 +367,21 @@
   position: absolute;
   top: -20px;
   color: white;
-  font-size: 1.5rem;
-  opacity: 0.8;
-  animation: fall 5s linear infinite;
-}
-
-/* Specific Snow Speeds/Sizes per Layer */
-.weather-layer.back .snow-drop {
-  animation-duration: 8s;
-  font-size: 0.8rem;
-  opacity: 0.5;
-}
-
-.weather-layer.mid .snow-drop {
-  animation-duration: 5s;
   font-size: 1.2rem;
-  opacity: 0.8;
-}
-
-.weather-layer.front .snow-drop {
-  animation-duration: 3s;
-  font-size: 1.8rem;
-  opacity: 1;
+  /* Standard readable size */
+  opacity: 0.9;
+  animation: fall 15s linear infinite;
+  /* Very slow snow base */
 }
 
 @keyframes fall {
   from {
-    top: -50px;
+    transform: translateY(0);
   }
 
   to {
-    top: 110vh;
-    /* Fall past bottom of screen */
-  }
-}
-
-@keyframes birdFly {
-  0% {
-    left: -50px;
-    transform: scaleX(1) translateY(0);
-  }
-
-  25% {
-    transform: scaleX(1) translateY(-20px);
-  }
-
-  50% {
-    transform: scaleX(1) translateY(0);
-  }
-
-  51% {
-    left: 100vw;
-    transform: scaleX(-1);
-  }
-
-  /* Flip to return? Or just loop */
-  /* Simple loop from left to right */
-  100% {
-    left: 100vw;
-    transform: scaleX(1) translateY(-10px);
+    transform: translateY(130vh);
+    /* Fall past bottom of screen (using GPU) */
   }
 }
 

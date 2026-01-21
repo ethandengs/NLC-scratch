@@ -85,12 +85,6 @@ export const Field = ({ onSelectSheep }) => {
                     <div className="sun"></div>
                 )}
 
-                {/* Birds - Removed */}
-
-                {/* Rain Overlay - Removed (Now Global) */}
-
-                {/* Snow Overlay - Removed (Now Global) */}
-
                 {/* Hill Range (Horizon) */}
                 <div className="hill-range">
                     <div className="hill h-1"></div>
@@ -111,7 +105,6 @@ export const Field = ({ onSelectSheep }) => {
                     zIndex: 0,
                     pointerEvents: 'none'
                 }}>
-                    {/* Text removed, moved to signboard */}
                 </div>
 
                 {/* Render Decorations */}
@@ -183,27 +176,32 @@ export const Field = ({ onSelectSheep }) => {
                 )}
             </div>
 
-            {/* Global Weather Overlay (Parallax 3D) */}
+            {/* Global Weather Overlay */}
             {(weather?.type === 'rain' || weather?.type === 'storm' || weather?.type === 'snow') && (
                 <div className="weather-overlay">
-                    {['back', 'mid', 'front'].map((layer, layerIdx) => {
+                    {useMemo(() => {
                         const isRain = weather.type === 'rain' || weather.type === 'storm';
-                        // Front layer has fewer but faster drops, Back has many but slow/small
-                        const count = isRain
-                            ? (layer === 'back' ? 60 : layer === 'mid' ? 30 : 15)
-                            : (layer === 'back' ? 50 : layer === 'mid' ? 25 : 10);
+                        const count = 50;
+
+                        const drops = [...Array(count)].map((_, i) => ({
+                            id: i,
+                            left: `${Math.random() * 100}%`,
+                            delay: `-${Math.random() * 10}s`,
+                            duration: isRain
+                                ? `${2.5 + Math.random()}s` // Rain: 2.5s - 3.5s (Slower)
+                                : `${15 + Math.random() * 5}s` // Snow: 15s - 20s (Very Slow)
+                        }));
 
                         return (
-                            <div key={layer} className={`weather-layer ${layer} ${weather.type}`}>
-                                {[...Array(count)].map((_, i) => (
+                            <div className={`weather-layer ${weather.type}`}>
+                                {drops.map(drop => (
                                     <div
-                                        key={i}
+                                        key={drop.id}
                                         className={isRain ? 'rain-drop' : 'snow-drop'}
                                         style={{
-                                            left: `${Math.random() * 100}%`,
-                                            // Randomize delay and duration slightly per drop, but base speed controlled by layer CSS
-                                            animationDelay: `-${Math.random() * 5}s`,
-                                            animationDuration: isRain ? undefined : `${(layerIdx + 1) * 2 + Math.random()}s` // Snow needs varying fall times manually if not fully CSS
+                                            left: drop.left,
+                                            animationDelay: drop.delay,
+                                            animationDuration: drop.duration
                                         }}
                                     >
                                         {isRain ? '' : '❄'}
@@ -211,7 +209,7 @@ export const Field = ({ onSelectSheep }) => {
                                 ))}
                             </div>
                         );
-                    })}
+                    }, [weather?.type])}
                 </div>
             )}
         </div>
