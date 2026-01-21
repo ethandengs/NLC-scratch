@@ -3,12 +3,12 @@ import { useGame } from '../context/GameContext';
 import { SheepVisual } from './SheepVisual'; // Import for preview
 
 const COLORS = [
-    { name: 'White', value: '#ffffff' },
-    { name: 'Cream', value: '#fff5e6' },
-    { name: 'Black', value: '#222222' },
-    { name: 'Grey', value: '#888888' },
-    { name: 'Pink', value: '#ffd1dc' },
-    { name: 'Blue', value: '#e6e6fa' },
+    { name: '雪白', value: '#f5f5f5' },
+    { name: '米白', value: '#f0e6d2' },
+    { name: '淺褐', value: '#d4c4b0' },
+    { name: '深褐', value: '#9e8a78' },
+    { name: '灰褐', value: '#877b6e' },
+    { name: '深灰', value: '#5a5550' },
 ];
 
 const ACCESSORIES = [
@@ -156,10 +156,20 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
 
     const isEditing = !!editingSheep;
 
+    // Detect if visual settings have changed (for Edit mode only)
+    const hasVisualChanges = isEditing && (
+        (mode === 'css' && (
+            selectedColor !== (editingSheep?.visual?.color || '#ffffff') ||
+            selectedAccessory !== (editingSheep?.visual?.accessory || 'none') ||
+            selectedPattern !== (editingSheep?.visual?.pattern || 'none')
+        )) ||
+        (mode === 'skin' && selectedSkinId !== (editingSheep?.skinId || null))
+    );
+
     return (
         <div className="debug-editor-overlay" onClick={onCancel}>
             <div className="simple-editor" onClick={(e) => e.stopPropagation()}
-                style={{ width: '450px', padding: '20px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                style={{ width: '360px', padding: '20px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: '15px' }}>
 
                 <div className="editor-header">
                     <h3>{isEditing ? `🎨 編輯 ${name} 的外觀` : (isBatchMode ? '批量新增' : '新增小羊')}</h3>
@@ -176,7 +186,7 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                             <SheepVisual
                                 centered={true} // Use new centering prop
                                 isStatic={true}
-                                scale={2.5}
+                                scale={0.65}
                                 visual={{
                                     color: selectedColor,
                                     accessory: selectedAccessory,
@@ -229,8 +239,11 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                                                     {COLORS.map(c => (
                                                         <div key={c.value} onClick={() => setSelectedColor(c.value)}
                                                             style={{
-                                                                width: '24px', height: '24px', borderRadius: '50%', background: c.value,
-                                                                border: selectedColor === c.value ? '2px solid #333' : '1px solid #ccc', cursor: 'pointer'
+                                                                width: '30px', height: '30px', borderRadius: '50%', background: c.value,
+                                                                border: selectedColor === c.value ? '3px solid #66bb6a' : '2px solid #ddd',
+                                                                boxShadow: selectedColor === c.value ? '0 2px 8px rgba(102, 187, 106, 0.4)' : '0 1px 3px rgba(0,0,0,0.15)',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s ease'
                                                             }} title={c.name} />
                                                     ))}
                                                 </div>
@@ -264,13 +277,32 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                                                     )}
                                                 </>
                                             ) : (
-                                                <div style={{ background: '#f9f9f9', padding: '8px', borderRadius: '5px' }}>
-                                                    <input type="text" placeholder="名稱" value={newSkinName} onChange={e => setNewSkinName(e.target.value)} style={{ width: '100%', marginBottom: '4px', padding: '4px' }} />
-                                                    <input type="text" placeholder="網址 (支援 GIF 動圖)" value={newSkinUrl} onChange={e => setNewSkinUrl(e.target.value)} style={{ width: '100%', marginBottom: '4px', padding: '4px' }} />
+                                                <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+                                                    <div style={{ marginBottom: '8px' }}>
+                                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#555', marginBottom: '4px', fontWeight: '500' }}>名稱</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="例: 香蕉羊"
+                                                            value={newSkinName}
+                                                            onChange={e => setNewSkinName(e.target.value)}
+                                                            style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
+                                                        />
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '8px' }}>
+                                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#555', marginBottom: '4px', fontWeight: '500' }}>網址 (支援 GIF 動圖)</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="https://..."
+                                                            value={newSkinUrl}
+                                                            onChange={e => setNewSkinUrl(e.target.value)}
+                                                            style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
+                                                        />
+                                                    </div>
 
                                                     {/* File Upload (Storage) */}
-                                                    <div style={{ marginBottom: '8px' }}>
-                                                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '2px' }}>或是上傳本地圖片:</label>
+                                                    <div style={{ marginBottom: '12px' }}>
+                                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#555', marginBottom: '4px', fontWeight: '500' }}>或是上傳本地圖片:</label>
                                                         <input
                                                             type="file"
                                                             accept="image/*"
@@ -292,13 +324,44 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                                                                     reader.readAsDataURL(file);
                                                                 }
                                                             }}
-                                                            style={{ fontSize: '0.8rem' }}
+                                                            style={{ width: '100%', fontSize: '0.85rem', padding: '4px' }}
                                                         />
+                                                        <small style={{ color: '#999', fontSize: '0.75rem' }}>支援 JPG, PNG, GIF (上限 2MB)</small>
                                                     </div>
 
-                                                    <div style={{ display: 'flex', gap: '5px' }}>
-                                                        <button type="button" onClick={handleCreateSkin} disabled={!newSkinName || (!newSkinUrl && !newSkinFile)} style={{ flex: 1, background: '#66bb6a', color: 'white', border: 'none', padding: '4px', borderRadius: '4px' }}>儲存</button>
-                                                        <button type="button" onClick={() => setIsCreatingSkin(false)} style={{ flex: 1, background: '#ccc', border: 'none', padding: '4px', borderRadius: '4px' }}>取消</button>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleCreateSkin}
+                                                            disabled={!newSkinName || (!newSkinUrl && !newSkinFile)}
+                                                            style={{
+                                                                flex: 1,
+                                                                background: (!newSkinName || (!newSkinUrl && !newSkinFile)) ? '#ccc' : '#4caf50',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                padding: '8px',
+                                                                borderRadius: '5px',
+                                                                cursor: (!newSkinName || (!newSkinUrl && !newSkinFile)) ? 'not-allowed' : 'pointer',
+                                                                fontWeight: '500'
+                                                            }}
+                                                        >
+                                                            📤 上傳檔案
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsCreatingSkin(false)}
+                                                            style={{
+                                                                flex: 1,
+                                                                background: '#e0e0e0',
+                                                                color: '#666',
+                                                                border: 'none',
+                                                                padding: '8px',
+                                                                borderRadius: '5px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            取消
+                                                        </button>
                                                     </div>
                                                 </div>
                                             )}
@@ -358,7 +421,20 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
                         <button type="button" onClick={onCancel} style={{ flex: 1, padding: '10px', background: '#ccc', border: 'none', borderRadius: '5px' }}>取消</button>
-                        <button type="submit" style={{ flex: 1, padding: '10px', background: '#66bb6a', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold' }}>
+                        <button
+                            type="submit"
+                            disabled={isEditing && !hasVisualChanges}
+                            style={{
+                                flex: 1,
+                                padding: '10px',
+                                background: (isEditing && !hasVisualChanges) ? '#ccc' : '#66bb6a',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                fontWeight: 'bold',
+                                cursor: (isEditing && !hasVisualChanges) ? 'not-allowed' : 'pointer'
+                            }}
+                        >
                             {isEditing ? '儲存變更' : (isBatchMode ? '批量新增' : '確認新增')}
                         </button>
                     </div>

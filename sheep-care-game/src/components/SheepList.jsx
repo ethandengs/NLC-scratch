@@ -41,6 +41,25 @@ export const SheepList = ({ onSelect, onClose }) => {
         }
     };
 
+    const handleResetSelected = () => {
+        if (selectedIds.size === 0) return;
+        if (window.confirm(`確定要重置這 ${selectedIds.size} 隻小羊的資料嗎？\n將回到初始狀態（負擔 60%）`)) {
+            selectedIds.forEach(id => {
+                updateSheep(id, {
+                    health: 60,
+                    status: 'healthy',
+                    type: 'LAMB',
+                    careLevel: 0,
+                    prayedCount: 0,
+                    resurrectionProgress: 0,
+                    lastPrayedDate: null
+                });
+            });
+            setIsSelectionMode(false);
+            setSelectedIds(new Set());
+        }
+    };
+
     const handleUpdateConfirm = (updatedData) => {
         if (editingSheep && updateSheep) {
             updateSheep(editingSheep.id, updatedData);
@@ -114,18 +133,32 @@ export const SheepList = ({ onSelect, onClose }) => {
                                 />
                                 全選 ({selectedIds.size}/{sortedSheep.length})
                             </label>
-                            <button
-                                onClick={handleDeleteSelected}
-                                disabled={selectedIds.size === 0}
-                                style={{
-                                    background: selectedIds.size > 0 ? '#f44336' : '#ddd',
-                                    color: 'white', border: 'none', borderRadius: '4px',
-                                    padding: '5px 10px', fontSize: '0.8rem',
-                                    cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed'
-                                }}
-                            >
-                                刪除選取 ({selectedIds.size})
-                            </button>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button
+                                    onClick={handleResetSelected}
+                                    disabled={selectedIds.size === 0}
+                                    style={{
+                                        background: selectedIds.size > 0 ? '#ff9800' : '#ddd',
+                                        color: 'white', border: 'none', borderRadius: '4px',
+                                        padding: '5px 10px', fontSize: '0.8rem',
+                                        cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed'
+                                    }}
+                                >
+                                    🔄 重置選取 ({selectedIds.size})
+                                </button>
+                                <button
+                                    onClick={handleDeleteSelected}
+                                    disabled={selectedIds.size === 0}
+                                    style={{
+                                        background: selectedIds.size > 0 ? '#f44336' : '#ddd',
+                                        color: 'white', border: 'none', borderRadius: '4px',
+                                        padding: '5px 10px', fontSize: '0.8rem',
+                                        cursor: selectedIds.size > 0 ? 'pointer' : 'not-allowed'
+                                    }}
+                                >
+                                    🗑️ 刪除選取 ({selectedIds.size})
+                                </button>
+                            </div>
                         </div>
                     )}
 

@@ -115,10 +115,11 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
     }
 
     // Status Text
-    const getStatusText = (status) => {
+    const getStatusText = (status, health) => {
         if (status === 'dead') return '已安息 🪦';
         if (status === 'sick') return '生病 (需禱告恢復)';
         if (status === 'injured') return '受傷 (需禱告恢復)';
+        if (health >= 80) return '強壯 💪';
         return '健康';
     };
 
@@ -161,10 +162,10 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                             background: '#f5f5f5',
                             borderRadius: '8px',
                             display: 'flex', flexDirection: 'column', gap: '5px',
-                            color: isDead ? '#666' : (target.status === 'healthy' ? 'green' : 'red')
+                            color: isDead ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'red'))
                         }}>
                             <div>
-                                {getStatusText(target.status)}
+                                {getStatusText(target.status, target.health)}
                                 {!isDead && <span style={{ marginLeft: '10px' }}>HP: {Math.round(target.health)}%</span>}
                                 {!isDead && <span style={{ marginLeft: '10px', color: '#ff9800' }}>❤️ 關愛: {target.careLevel || 0}</span>}
                             </div>
@@ -203,7 +204,12 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                                         min="1"
                                         max="100"
                                         value={target.health}
-                                        onChange={(e) => updateSheep(target.id, { health: Number(e.target.value) })}
+                                        onChange={(e) => {
+                                            const newHealth = Number(e.target.value);
+                                            const newType = newHealth >= 80 ? 'STRONG' : 'LAMB';
+                                            const newStatus = newHealth < 40 ? 'sick' : (target.status === 'sick' && newHealth >= 40 ? 'healthy' : target.status);
+                                            updateSheep(target.id, { health: newHealth, type: newType, status: newStatus });
+                                        }}
                                         style={{ flex: 1, cursor: 'pointer' }}
                                     />
                                     <button
@@ -271,7 +277,7 @@ export const DebugEditor = ({ selectedSheepId, onClose }) => {
                                 <button
                                     onClick={() => {
                                         updateSheep(target.id, {
-                                            health: 100,
+                                            health: 60,
                                             status: 'healthy',
                                             type: 'LAMB',
                                             careLevel: 0,

@@ -322,7 +322,7 @@ export const GameProvider = ({ children }) => {
             id: tempId,
             name, type: 'LAMB',
             spiritualMaturity,
-            careLevel: 0, health: 100, strength: 0, status: 'healthy',
+            careLevel: 0, health: 60, strength: 0, status: 'healthy',
             state: 'idle', note: '', prayedCount: 0, lastPrayedDate: null,
             resurrectionProgress: 0,
             visual: safeVisual,
@@ -338,7 +338,7 @@ export const GameProvider = ({ children }) => {
             try {
                 const { data: inserted, error } = await supabase.from('sheep').insert([{
                     owner_id: lineId,
-                    name, status: 'healthy', health: 100,
+                    name, status: 'healthy', health: 60,
                     spiritual_maturity: spiritualMaturity,
                     visual_data: {
                         x: newSheep.x, y: newSheep.y, angle: newSheep.angle,

@@ -227,7 +227,8 @@ export const calculateTick = (s) => {
     if (newHealth <= 0 && s.status !== 'dead') {
         newStatus = 'dead';
         newHealth = 0;
-    } else if (newHealth < 40 && s.status === 'healthy' && Math.random() < 0.005) {
+    } else if (newHealth < 40 && s.status === 'healthy') {
+        // Always become sick when health drops below 40%
         newStatus = 'sick';
     } else if (newHealth >= 40 && s.status === 'sick') {
         // Auto-recover from sickness if health is restored (e.g. by Admin or other means)
