@@ -293,43 +293,6 @@ export const GameProvider = ({ children }) => {
             updated_at: new Date().toISOString()
         }));
 
-        const validUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const LIFF_ID = "2008919632-15fCJTqb";
-
-        // --- Session Init (SessionStorage for Auto-Logout on Close) ---
-        const [currentUser, setCurrentUser] = useState(null); // Line Name
-        const [nickname, setNickname] = useState(null); // User Nickname
-        const [lineId, setLineId] = useState(null); // Line User ID
-        const [isLoading, setIsLoading] = useState(true);
-
-        const [isDataLoaded, setIsDataLoaded] = useState(false);
-
-        const getLocalData = (key, fallback) => {
-            // We only load data if we have a valid session user
-            const storedUser = localStorage.getItem('sheep_current_session');
-            if (storedUser) {
-                const cache = localStorage.getItem(`sheep_game_data_${storedUser}`);
-                if (cache) {
-                    try { return JSON.parse(cache)[key] || fallback; } catch (e) { }
-                }
-            }
-            return fallback;
-        };
-
-        // ... (Existing state)
-        const [sheep, setSheep] = useState([]);
-        const [inventory, setInventory] = useState([]);
-        const [message, setMessage] = useState(null);
-        const [notificationEnabled, setNotificationEnabled] = useState(false);
-        const [weather, setWeather] = useState({ type: 'sunny', isDay: true, temp: 25 });
-
-        const [skins, setSkins] = useState([]); // New Skins State
-
-        // ... (Existing useEffects)
-
-        // --- SKINS LOGIC ---
-        // ...
-
         const rowsToUpsert = sheepRows.filter(r => validUUID.test(r.id));
 
         localStorage.setItem(`sheep_game_data_${lineId}`, JSON.stringify({

@@ -85,27 +85,18 @@ export const Field = ({ onSelectSheep }) => {
                     <div className="sun"></div>
                 )}
 
-                {/* Birds - Hide if raining or snowing */}
-                {weather?.type !== 'rain' && weather?.type !== 'storm' && weather?.type !== 'snow' && (
-                    // Birds were removed by request previously, but if user wants them back in future, logic is here.
-                    // Currently no birds code block exists here based on previous edit. 
-                    // I will leave this empty or skip re-adding birds.
-                    null
-                )}
+                {/* Birds - Removed */}
 
-                {/* Rain Overlay */}
-                {(weather?.type === 'rain' || weather?.type === 'storm') && (
-                    <div className="rain-container">
-                        {[...Array(20)].map((_, i) => <div key={i} className="rain-drop" style={{ left: `${Math.random() * 100}%`, animationDelay: `${Math.random()}s`, animationDuration: `${0.5 + Math.random() * 0.5}s` }}></div>)}
-                    </div>
-                )}
+                {/* Rain Overlay - Removed (Now Global) */}
 
-                {/* Snow Overlay */}
-                {weather?.type === 'snow' && (
-                    <div className="rain-container"> {/* Reuse container for full coverage */}
-                        {[...Array(30)].map((_, i) => <div key={i} className="snow-drop" style={{ left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 5}s`, animationDuration: `${3 + Math.random() * 2}s` }}>❄</div>)}
-                    </div>
-                )}
+                {/* Snow Overlay - Removed (Now Global) */}
+
+                {/* Hill Range (Horizon) */}
+                <div className="hill-range">
+                    <div className="hill h-1"></div>
+                    <div className="hill h-2"></div>
+                    <div className="hill h-3"></div>
+                </div>
             </div>
 
 
@@ -122,6 +113,7 @@ export const Field = ({ onSelectSheep }) => {
                 }}>
                     {/* Text removed, moved to signboard */}
                 </div>
+
                 {/* Render Decorations */}
                 {decorations.map(d => {
                     const bottomPos = 5 + d.y * 0.9; // Map 0-100 Y to Screen%
@@ -190,6 +182,38 @@ export const Field = ({ onSelectSheep }) => {
                     </div>
                 )}
             </div>
+
+            {/* Global Weather Overlay (Parallax 3D) */}
+            {(weather?.type === 'rain' || weather?.type === 'storm' || weather?.type === 'snow') && (
+                <div className="weather-overlay">
+                    {['back', 'mid', 'front'].map((layer, layerIdx) => {
+                        const isRain = weather.type === 'rain' || weather.type === 'storm';
+                        // Front layer has fewer but faster drops, Back has many but slow/small
+                        const count = isRain
+                            ? (layer === 'back' ? 60 : layer === 'mid' ? 30 : 15)
+                            : (layer === 'back' ? 50 : layer === 'mid' ? 25 : 10);
+
+                        return (
+                            <div key={layer} className={`weather-layer ${layer} ${weather.type}`}>
+                                {[...Array(count)].map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={isRain ? 'rain-drop' : 'snow-drop'}
+                                        style={{
+                                            left: `${Math.random() * 100}%`,
+                                            // Randomize delay and duration slightly per drop, but base speed controlled by layer CSS
+                                            animationDelay: `-${Math.random() * 5}s`,
+                                            animationDuration: isRain ? undefined : `${(layerIdx + 1) * 2 + Math.random()}s` // Snow needs varying fall times manually if not fully CSS
+                                        }}
+                                    >
+                                        {isRain ? '' : '❄'}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

@@ -70,6 +70,71 @@
   }
 }
 
+/* --- Hill Range (Watercolor Mountains) --- */
+.hill-range {
+  position: absolute;
+  bottom: -4vh;
+  /* Sink slightly to blend base */
+  left: 0;
+  width: 100%;
+  height: 25vh;
+  /* Smaller, deeper background */
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hill {
+  position: absolute;
+  bottom: 0;
+  opacity: 1;
+  /* Solid, opaque colors */
+  /* Remove box-shadow to keep it soft */
+  box-shadow: none;
+  /* Organic/Soft Curve */
+  clip-path: polygon(50% 10%, 80% 60%, 100% 100%, 0% 100%, 20% 60%);
+}
+
+/* Remove hard highlight textures */
+.hill::after {
+  display: none;
+}
+
+/* Layered Mountains - Solid Green Gradients */
+
+/* Left Hill (Pale Green) */
+.h-1 {
+  left: 5%;
+  width: 35%;
+  height: 18vh;
+  /* Radial Gradient for depth, but strictly Green tones */
+  background: radial-gradient(circle at 50% 100%, #AED581 0%, #C5E1A5 100%);
+  z-index: 1;
+}
+
+/* Center Peak (Main - Fresh Green) */
+.h-2 {
+  left: 30%;
+  width: 40%;
+  height: 25vh;
+  /* Peak is top center */
+  clip-path: polygon(50% 0%, 75% 40%, 100% 100%, 0% 100%, 25% 40%);
+  background: radial-gradient(circle at 50% 90%, #7CB342 0%, #AED581 100%);
+  z-index: 2;
+}
+
+/* Right Hill (Deep Green - No Yellow) */
+.h-3 {
+  right: auto;
+  left: 65%;
+  /* Explicitly on screen */
+  width: 30%;
+  height: 20vh;
+  background: radial-gradient(circle at 50% 100%, #558B2F 0%, #7CB342 100%);
+  z-index: 3;
+}
+
+
+
 .cloud-extra {
   position: absolute;
   background: white;
@@ -96,31 +161,7 @@
   opacity: 0.6;
 }
 
-.bird {
-  position: absolute;
-  font-size: 1.5rem;
-  z-index: 2;
-  animation: birdFly 20s linear infinite;
-}
-
-.b1 {
-  top: 20%;
-  animation-duration: 25s;
-  animation-delay: 0s;
-}
-
-.b2 {
-  top: 35%;
-  animation-duration: 30s;
-  animation-delay: 5s;
-  font-size: 1.2rem;
-}
-
-.b3 {
-  top: 10%;
-  animation-duration: 22s;
-  animation-delay: 10s;
-}
+/* Birds Removed */
 
 /* Weather States (Parent based) */
 .sunny .sky {
@@ -159,6 +200,8 @@
 /* Grass Weather States */
 .grass {
   transition: filter 1s ease, background 1s ease;
+  /* 3D Depth Gradient: Light/Misty at Horizon (Top) -> Rich/Dark at Near (Bottom) */
+  background: linear-gradient(to bottom, #9be15d 0%, #32CD32 30%, #228B22 100%);
 }
 
 .night .grass {
@@ -220,25 +263,75 @@
   }
 }
 
-/* Rain Animation */
-.rain-container {
+/* --- Global Weather Overlay (3D Parallax) --- */
+.weather-overlay {
   position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  z-index: 5;
+  z-index: 20;
+  /* Above everything */
   pointer-events: none;
+  /* Let clicks pass through */
 }
 
+.weather-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Parallax Depth */
+.weather-layer.back {
+  opacity: 0.4;
+  transform: scale(0.6);
+  z-index: 1;
+}
+
+.weather-layer.mid {
+  opacity: 0.7;
+  transform: scale(0.8);
+  z-index: 2;
+}
+
+.weather-layer.front {
+  opacity: 1;
+  transform: scale(1.2);
+  z-index: 3;
+}
+
+/* Rain Drops */
 .rain-drop {
   position: absolute;
-  top: -10px;
+  top: -20px;
   width: 2px;
-  height: 15px;
+  height: 20px;
   background: rgba(255, 255, 255, 0.6);
-  animation: fall 0.5s linear infinite;
+  animation: fall 1s linear infinite;
 }
 
+/* Specific Rain Speeds per Layer */
+.weather-layer.back .rain-drop {
+  animation-duration: 0.8s;
+  height: 10px;
+  width: 1px;
+}
+
+.weather-layer.mid .rain-drop {
+  animation-duration: 0.6s;
+  height: 15px;
+  width: 2px;
+}
+
+.weather-layer.front .rain-drop {
+  animation-duration: 0.4s;
+  height: 25px;
+  width: 3px;
+}
+
+/* Snow Drops */
 .snow-drop {
   position: absolute;
   top: -20px;
@@ -248,37 +341,33 @@
   animation: fall 5s linear infinite;
 }
 
-/* Night Mode Override */
-.sky.night {
-  background: linear-gradient(to bottom, #0f0c29 0%, #302b63 50%, #24243e 100%);
+/* Specific Snow Speeds/Sizes per Layer */
+.weather-layer.back .snow-drop {
+  animation-duration: 8s;
+  font-size: 0.8rem;
+  opacity: 0.5;
 }
 
-.sky.night .cloud-extra {
-  opacity: 0.3;
+.weather-layer.mid .snow-drop {
+  animation-duration: 5s;
+  font-size: 1.2rem;
+  opacity: 0.8;
 }
 
-/* Rain Animation */
-.rain-container {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.rain-drop {
-  position: absolute;
-  top: -10px;
-  width: 2px;
-  height: 15px;
-  background: rgba(255, 255, 255, 0.6);
-  animation: fall linear infinite;
+.weather-layer.front .snow-drop {
+  animation-duration: 3s;
+  font-size: 1.8rem;
+  opacity: 1;
 }
 
 @keyframes fall {
+  from {
+    top: -50px;
+  }
+
   to {
-    transform: translateY(120vh);
+    top: 110vh;
+    /* Fall past bottom of screen */
   }
 }
 
