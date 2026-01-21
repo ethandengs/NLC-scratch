@@ -147,19 +147,19 @@ export const Field = ({ onSelectSheep }) => {
                                     position: 'absolute',
                                     top: '40%', // Slightly higher to hit board center
                                     left: '50%',
-                                    transform: 'translate(-50%, -50%)',
+                                    transform: 'translate(-50%, -50%) scale(0.33)', // T-Rex fix: Scale down to bypass min-font-size
                                     color: '#4e342e', // Deep Brown
-                                    fontSize: '5px', // Smaller to fit
+                                    fontSize: '15px', // Increased 3x (5px -> 15px)
                                     fontWeight: 'bold', // Bold but not 900
                                     whiteSpace: 'nowrap',
                                     pointerEvents: 'none',
                                     fontFamily: '"Varela Round", "Microsoft JhengHei", "Hiragino Maru Gothic ProN", sans-serif',
-                                    width: '55%', // Tighter width
+                                    width: '165%', // Increased 3x (55% -> 165%)
                                     textAlign: 'center',
                                     background: '#d7ccc8', // Light brown background
-                                    borderRadius: '3px',
-                                    padding: '1px 0',
-                                    boxShadow: '0 0 1px rgba(0,0,0,0.1)'
+                                    borderRadius: '9px', // Scaled 3x
+                                    padding: '3px 0', // Scaled 3x
+                                    boxShadow: '0 0 3px rgba(0,0,0,0.1)' // Scaled 3x
                                 } : {
                                     // Default label styling (Floating above)
                                     position: 'absolute', top: '-25px', left: '50%', transform: 'translateX(-50%)',
