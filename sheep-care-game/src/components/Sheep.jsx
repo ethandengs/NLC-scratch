@@ -19,7 +19,7 @@ export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
     // Fix Scale: 0.6 + (y / 200). (At 0 -> 0.6. At 100 -> 1.1)
 
     const depthScale = 1.1 - ((sheep.y || 0) / 200);
-    const zIdx = Math.floor(1000 - (sheep.y || 0));
+    const zIdx = sheep.zIndex !== undefined ? sheep.zIndex : Math.floor(1000 - (sheep.y || 0));
 
     const handleInteract = (e) => {
         e.preventDefault();

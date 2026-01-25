@@ -14,7 +14,6 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const GameProvider = ({ children }) => {
-    // const API_URL = import.meta.env.VITE_API_URL; // Deprecated
     const LIFF_ID = "2008919632-15fCJTqb";
 
     // --- Session Init (SessionStorage for Auto-Logout on Close) ---
@@ -170,7 +169,6 @@ export const GameProvider = ({ children }) => {
         try {
             const localData = await getData(userId);
             if (localData) {
-                console.log("✅ IndexedDB Loaded Fast");
                 applyLoadedData(localData, userId);
                 setIsDataLoaded(true);
                 localTimestamp = localData.lastSave || 0;
@@ -223,7 +221,6 @@ export const GameProvider = ({ children }) => {
                     }
                     // 2. Fallback to Legacy JSON if Relational is empty
                     if (jsonSheep && jsonSheep.length > 0) {
-                        console.log("Using Legacy JSON Source...");
                         return jsonSheep;
                     }
                     return [];
@@ -233,7 +230,6 @@ export const GameProvider = ({ children }) => {
                 if (cloudTimestamp > localTimestamp + 1000) {
                     // Future Protection: If cloud is > 1s ahead, it's newer.
                     // Even if our clock is behind, we trust cloud timestamp if it claims to be newer than what we have.
-                    console.log(`☁️ Cloud (${cloudTimestamp}) is newer than Local (${localTimestamp}). Syncing...`);
                     showMessage("☁️ 發現雲端有新進度，同步中...");
                     const finalSheep = hydrateCloudSheep(cloudData.sheep, sheepData);
                     applyLoadedData({ ...cloudData, sheep: finalSheep }, userId);
@@ -242,7 +238,6 @@ export const GameProvider = ({ children }) => {
                 }
                 // Case B: Local is Newer -> UPLOAD TO CLOUD (Background)
                 else if (localTimestamp > cloudTimestamp) {
-                    console.log("Local is newer, pushing to cloud...");
                     saveToCloud();
                 }
                 // Case C: No Local Data at all -> Load Cloud
@@ -256,7 +251,6 @@ export const GameProvider = ({ children }) => {
                         // applyLoadedData sets 'sheep'.
                         // We can flag it? Or just let next auto-save handle it?
                         // Next auto-save will write to relational.
-                        console.log("Migrating Legacy JSON on next save...");
                     }
 
                     applyLoadedData({ ...cloudData, sheep: finalSheep }, userId);
@@ -658,7 +652,6 @@ export const GameProvider = ({ children }) => {
             if (now - lastSyncCheckRef.current < 10000) return;
             lastSyncCheckRef.current = now;
 
-            console.log("👀 Checking cloud version... (Lightweight)");
             try {
                 // Fetch ONLY game_data metadata (avoid large payload)
                 const { data, error } = await supabase
@@ -673,7 +666,6 @@ export const GameProvider = ({ children }) => {
 
                     // If Cloud is effectively newer (1s buffer)
                     if (cloudTs > localTs + 1000) {
-                        console.log(`🔄 New Cloud Data Found! Cloud: ${cloudTs}, Local: ${localTs}`);
                         showMessage("🔄 偵測到新進度，自動同步中...");
 
                         // Trigger Full Sync by calling handleLoginSuccess again
@@ -691,7 +683,7 @@ export const GameProvider = ({ children }) => {
                             handleLoginSuccess({ userId: lineId, displayName: currentUser, pictureUrl: '' });
                         }
                     } else {
-                        console.log("✅ Local is up to date.");
+                        // Local is up to date
                     }
                 }
             } catch (e) { console.error("Cloud check error", e); }
@@ -710,7 +702,6 @@ export const GameProvider = ({ children }) => {
 
         // Periodic Save (Every 60s)
         const intervalId = setInterval(() => {
-            console.log("⏱️ Auto-saving...");
             handleSave();
         }, 60000);
 

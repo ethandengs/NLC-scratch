@@ -56,27 +56,49 @@ const CloudDrifter = ({ y, scale = 1, duration = 40, color = "white", opacity = 
     </motion.g>
 );
 
-const RainLines = React.memo(({ count = 30, color = "#a8d5e5" }) => {
-    // Generate drops ONCE on mount
+const RainLines = React.memo(({ count = 30, color = "#a8d5e5", isStorm = false }) => {
+    // Rain vs Storm Physics Constants
+    const drift = isStorm ? 150 : 30; // How far it moves sideways during fall
+    const fallHeight = 700;
+
+    // Generate drops
     const drops = useMemo(() => [...Array(count)].map((_, i) => ({
         id: i,
-        startX: Math.random() * 1000,
-        duration: 3.5 + Math.random() * 2.5, // Slow
-        delay: Math.random() * 2
-    })), [count]);
+        // Start extra right to cover the drift
+        startX: Math.random() * (1000 + drift) - 20,
+        duration: isStorm
+            ? 0.7 + Math.random() * 0.4  // Fast (0.7-1.1s)
+            : 1.5 + Math.random() * 1.0, // Slow (1.5-2.5s)
+        delay: Math.random() * 2,
+        length: isStorm
+            ? 15 + Math.random() * 15    // Long (15-30px)
+            : 2 + Math.random() * 3      // Very Short (2-5px) - Drizzle
+    })), [count, isStorm, drift]);
 
     return (
-        <g opacity="0.5">
-            {drops.map(d => (
-                <motion.circle
-                    key={`rain-${d.id}`}
-                    cx={d.startX} cy={-20}
-                    r={1.5}
-                    fill={color}
-                    animate={{ cy: [0, 700], cx: [d.startX, d.startX - 50] }} // Drift left more
-                    transition={{ duration: d.duration, repeat: Infinity, ease: 'linear', delay: d.delay }}
-                />
-            ))}
+        <g opacity={isStorm ? 0.7 : 0.4}>
+            {drops.map(d => {
+                // Calculate Vector-Correct Slant
+                const slant = d.length * (drift / fallHeight);
+                return (
+                    <motion.line
+                        key={`rain-${d.id}`}
+                        x1={d.startX} y1={-50}
+                        x2={d.startX - slant} y2={-50 + d.length}
+                        stroke={color}
+                        strokeWidth={isStorm ? 1.5 : 1}
+                        strokeLinecap="round"
+                        animate={{
+                            // Falling & Drifting
+                            y1: [0, fallHeight],
+                            y2: [d.length, fallHeight + d.length],
+                            x1: [d.startX, d.startX - drift],
+                            x2: [d.startX - slant, d.startX - drift - slant]
+                        }}
+                        transition={{ duration: d.duration, repeat: Infinity, ease: 'linear', delay: d.delay }}
+                    />
+                );
+            })}
         </g>
     );
 });
@@ -85,22 +107,31 @@ const SnowFlakes = React.memo(({ count = 30 }) => {
     const flakes = useMemo(() => [...Array(count)].map((_, i) => ({
         id: i,
         startX: Math.random() * 1000,
-        r: Math.random() * 2 + 1,
-        duration: 6 + Math.random() * 4,
+        r: Math.random() * 2 + 1.5,
+        duration: 8 + Math.random() * 7, // Slower (8-15s)
         delay: Math.random() * 5,
-        drift: (Math.random() - 0.5) * 100
+        sway: 30 + Math.random() * 50 // Sway amplitude
     })), [count]);
 
     return (
-        <g opacity="0.6">
+        <g opacity="0.8">
             {flakes.map(f => (
                 <motion.circle
                     key={`snow-${f.id}`}
                     cx={f.startX} cy={-20}
                     r={f.r}
                     fill="white"
-                    animate={{ cy: 700, cx: f.startX + f.drift }}
-                    transition={{ duration: f.duration, repeat: Infinity, ease: 'linear', delay: f.delay }}
+                    animate={{
+                        cy: [0, 700],
+                        cx: [f.startX, f.startX - f.sway, f.startX + f.sway, f.startX - f.sway] // Swaying
+                    }}
+                    transition={{
+                        duration: f.duration,
+                        repeat: Infinity,
+                        ease: 'linear',
+                        delay: f.delay,
+                        times: [0, 1] // Linear fall, but cx is keyframed? No, motion maps arrays to equal time slices by default
+                    }}
                 />
             ))}
         </g>
@@ -157,21 +188,33 @@ export const BackgroundSVG = ({ isDay = true, weatherType = 'sunny' }) => {
 
         if (weatherType === 'rain') {
             skyGradient = isDay ? ['#546E7A', '#CFD8DC'] : ['#263238', '#37474F'];
+            mountainColor = isDay ? "#558B2F" : "#1B5E20"; // Darker Green for Rain
             cloudColor = "#90A4AE";
             cloudOpacity = 0.9;
             cloudCount = 6;
             precip = 'rain';
         } else if (weatherType === 'storm') {
-            skyGradient = isDay ? ['#37474F', '#455A64'] : ['#102027', '#263238'];
+            // Darker Storm Sky (But lighter than before per user request)
+            skyGradient = isDay ? ['#37474F', '#546E7A'] : ['#102027', '#263238'];
+            mountainColor = isDay ? "#33691E" : "#000000"; // Very Dark/Murky for Storm
             cloudColor = "#546E7A";
             cloudOpacity = 1;
             cloudCount = 8;
             precip = 'storm';
         } else if (weatherType === 'snow') {
             skyGradient = isDay ? ['#B3E5FC', '#E1F5FE'] : ['#1A237E', '#3949AB'];
+            mountainColor = isDay ? "#E1F5FE" : "#9FA8DA"; // Snowy Mountains
             cloudColor = "#E1F5FE";
             cloudCount = 5;
             precip = 'snow';
+        } else if (weatherType === 'cloudy') {
+            // DISTINCT CLOUDY VISUALS
+            skyGradient = isDay ? ['#78909C', '#B0BEC5'] : ['#37474F', '#546E7A']; // Gray-Blue Sky
+            mountainColor = isDay ? "#66BB6A" : "#2E7D32"; // Slightly dimmer than Sunny
+            cloudColor = "#ECEFF1"; // Off-white clouds
+            cloudOpacity = 0.9;
+            cloudCount = 12; // Many clouds
+            precip = null;
         }
 
         return { skyGradient, mountainColor, cloudColor, cloudOpacity, cloudCount, precip };
@@ -185,11 +228,16 @@ export const BackgroundSVG = ({ isDay = true, weatherType = 'sunny' }) => {
             background: `linear-gradient(to bottom, ${config.skyGradient[0]} 0%, ${config.skyGradient[1]} 100%)`,
             transition: 'background 2s ease'
         }}>
-            <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMin slice" style={{ width: '100%', height: '100%' }}>
-
+            {/* --- Layer 1: SKY (Align Top - xMidYMin) --- */}
+            {/* Ensures Sun/Moon/Stars exist in the top logic regardless of screen aspect */}
+            <svg
+                viewBox="0 0 1000 600"
+                preserveAspectRatio="xMidYMin slice"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            >
                 {/* --- Celestial Bodies --- */}
                 <AnimatePresence mode="wait">
-                    {isDay && weatherType !== 'storm' && (
+                    {isDay && weatherType !== 'storm' && weatherType !== 'cloudy' && weatherType !== 'rain' && (
                         <motion.g
                             key="sun"
                             initial={{ y: 600, x: 200, opacity: 0 }}
@@ -198,7 +246,6 @@ export const BackgroundSVG = ({ isDay = true, weatherType = 'sunny' }) => {
                             transition={{ duration: 1 }}
                             transform="translate(0, 0)"
                         >
-                            {/* Adjusted: Fixed coordinates to center on the motion group (0,0) */}
                             <foreignObject x="-50" y="-50" width="100" height="100" style={{ overflow: 'visible' }}>
                                 <svg width="100" height="100" viewBox="-50 -50 100 100"><Sun /></svg>
                             </foreignObject>
@@ -228,7 +275,7 @@ export const BackgroundSVG = ({ isDay = true, weatherType = 'sunny' }) => {
                 {config.cloudCount > 0 && [...Array(config.cloudCount)].map((_, i) => (
                     <CloudDrifter
                         key={`cloud-${i}`}
-                        y={80 + Math.random() * 80} // Y: 80-160 (Lower, avoiding top edge)
+                        y={80 + Math.random() * 80} // Y: 80-160
                         scale={0.8 + Math.random() * 0.8}
                         duration={45 + Math.random() * 30}
                         delay={-Math.random() * 60}
@@ -238,28 +285,37 @@ export const BackgroundSVG = ({ isDay = true, weatherType = 'sunny' }) => {
                 ))}
 
                 {/* --- Background Precipitation --- */}
-                {config.precip === 'rain' && <RainLines count={60} color="#B0BEC5" />}
-                {config.precip === 'storm' && <RainLines count={100} color="#78909C" />}
+                {config.precip === 'rain' && <RainLines key="rain-bg" configKey="rain" color="#B0BEC5" />}
+                {config.precip === 'storm' && <RainLines key="storm-bg" configKey="storm" color="#78909C" />}
                 {config.precip === 'snow' && <SnowFlakes count={50} />}
+            </svg>
 
-                {/* --- Mountains (Back) - TALLER & VISIBLE VALLEYS --- */}
+            {/* --- Layer 2: GROUND (Align Bottom - xMidYMax) --- */}
+            {/* Ensures Ground/Mountains stick to the bottom */}
+            <svg
+                viewBox="0 0 1000 600"
+                preserveAspectRatio="xMidYMax slice"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            >
+                {/* --- Mountains (Back) - RAISED to Touch Sun (Corrected) --- */}
+                {/* Right Peak (Sun Side) tuned to Y~190 to cover bottom 1/3 of Sun (Y=80-115) */}
                 <path
-                    d="M0,600 L0,200 Q250,5 500,140 Q750,20 1000,120 L1000,600 Z"
+                    d="M0,600 L0,320 Q250,160 500,240 Q750,140 1000,280 L1000,600 Z"
                     fill={config.mountainColor}
                     opacity="1" /* Opaque */
                 />
 
-                {/* --- Mountains (Mid) - RAISED --- */}
+                {/* --- Mountains (Mid) - SUPPORTING HILLS --- */}
                 <path
-                    d="M-50,600 L-50,300 Q300,150 650,280 T1050,300 L1050,600 Z"
+                    d="M-50,600 L-50,420 Q300,280 650,380 T1050,450 L1050,600 Z"
                     fill={config.mountainColor}
                     filter="brightness(0.9)"
                     opacity="1" /* Opaque */
                 />
 
-                {/* --- Front Hills --- */}
+                {/* --- Front Hills - ABOVE GRASS LINE --- */}
                 <path
-                    d="M0,600 L0,350 Q250,400 500,320 Q750,280 1000,360 L1000,600 Z"
+                    d="M0,600 L0,500 Q250,480 500,450 Q750,420 1000,480 L1000,600 Z"
                     fill={isDay ? "#AED581" : "#558B2F"}
                     opacity="1" /* Opaque */
                 />

@@ -7,32 +7,52 @@ import { BackgroundSVG } from './BackgroundSVG';
 import { Rock, Sign, GraveyardZone, GrassTuft } from './Decorations';
 
 // --- SVG Weather Components (Foreground) ---
-const ForegroundRain = React.memo(() => {
-    // Generate drops ONCE on mount
-    const drops = useMemo(() => [...Array(80)].map((_, i) => ({
+// --- SVG Weather Components (Foreground) ---
+const FG_RAIN_CONFIG = {
+    storm: { drift: 8, count: 60, strokeWidth: 1.5, durationMin: 1.0, durationRange: 0.5, lengthMin: 1.5, lengthRange: 1.5 },
+    rain: { drift: 3, count: 80, strokeWidth: 1, durationMin: 1.5, durationRange: 1.0, lengthMin: 0.2, lengthRange: 0.3 }
+};
+
+const ForegroundRain = React.memo(({ isStorm }) => {
+    const cfg = isStorm ? FG_RAIN_CONFIG.storm : FG_RAIN_CONFIG.rain;
+    const fallHeight = 120; // %
+
+    const drops = useMemo(() => [...Array(cfg.count)].map((_, i) => ({
         id: i,
-        startX: Math.random() * 100,
+        startX: Math.random() * (100 + cfg.drift) - 5,
         delay: Math.random() * 2,
-        duration: 3.0 + Math.random() * 3.0 // Slow float (3-6s)
-    })), []);
+        duration: cfg.durationMin + Math.random() * cfg.durationRange,
+        length: cfg.lengthMin + Math.random() * cfg.lengthRange
+    })), [cfg]);
 
     return (
         <g>
-            {drops.map(d => (
-                <motion.circle
-                    key={`rain-fg-${d.id}`}
-                    cx={`${d.startX}%`} cy={-10}
-                    r={2}
-                    fill="#E1F5FE" fillOpacity="0.6"
-                    animate={{ cy: ['-10%', '110%'], cx: [`${d.startX}%`, `${d.startX - 5}%`] }}
-                    transition={{
-                        duration: d.duration,
-                        repeat: Infinity,
-                        ease: "linear",
-                        delay: d.delay
-                    }}
-                />
-            ))}
+            {drops.map(d => {
+                const slant = d.length * (cfg.drift / fallHeight);
+                return (
+                    <motion.line
+                        key={`rain-fg-${d.id}`}
+                        x1={`${d.startX}%`} y1="-10%"
+                        x2={`${d.startX - slant}%`} y2={`${-10 + d.length}%`}
+                        stroke={isStorm ? "#90A4AE" : "#E1F5FE"}
+                        strokeWidth={cfg.strokeWidth}
+                        strokeOpacity="0.5"
+                        strokeLinecap="round"
+                        animate={{
+                            y1: ["-10%", "110%"],
+                            y2: [`${-10 + d.length}%`, `${110 + d.length}%`],
+                            x1: [`${d.startX}%`, `${d.startX - cfg.drift}%`],
+                            x2: [`${d.startX - slant}%`, `${d.startX - cfg.drift - slant}%`]
+                        }}
+                        transition={{
+                            duration: d.duration,
+                            repeat: Infinity,
+                            ease: "linear",
+                            delay: d.delay
+                        }}
+                    />
+                );
+            })}
         </g>
     );
 });
@@ -40,10 +60,11 @@ const ForegroundRain = React.memo(() => {
 const ForegroundSnow = React.memo(() => {
     const drops = useMemo(() => [...Array(40)].map((_, i) => ({
         id: i,
-        cx: Math.random() * 100,
+        startX: Math.random() * 100,
         r: Math.random() * 3 + 2,
-        duration: 5 + Math.random() * 5,
-        delay: Math.random() * 5
+        duration: 10 + Math.random() * 10, // Very slow float
+        delay: Math.random() * 5,
+        sway: 5 + Math.random() * 10 // % units
     })), []);
 
     return (
@@ -51,12 +72,13 @@ const ForegroundSnow = React.memo(() => {
             {drops.map(d => (
                 <motion.circle
                     key={`snow-fg-${d.id}`}
-                    cx={`${d.cx}%`} cy={-10}
+                    cx={`${d.startX}%`} cy={-10}
                     r={d.r}
                     fill="white"
+                    fillOpacity="0.8"
                     animate={{
-                        cy: ["-5%", "110%"],
-                        cx: [`${d.cx}%`, `${d.cx - 10}%`, `${d.cx + 5}%`, `${d.cx - 5}%`] // Meander
+                        cy: ["-10%", "110%"],
+                        cx: [`${d.startX}%`, `${d.startX - d.sway}%`, `${d.startX + d.sway}%`, `${d.startX}%`]
                     }}
                     transition={{
                         duration: d.duration,
@@ -133,19 +155,37 @@ export const Field = ({ onSelectSheep }) => {
     }, [livingSheep, visibleLivingIds, settings]);
 
     // --- 4. Fence Data (Centralized for alignment) ---
+    // --- 4. Fence Data (Centralized for alignment) ---
+    // Dynamic Fence Scaling for Mobile (User Request: Prevent Deformation)
+    const [fenceXScale, setFenceXScale] = useState(1);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            // Desktop (aspect > 1): Scale 1 (Circle R=33)
+            // Mobile (aspect ~0.5): Scale 1.8 (Ellipse R=60)
+            // Linear interpolation or simple threshold
+            const newScale = Math.max(1, 1.8 - (aspect * 0.8));
+            setFenceXScale(Math.min(2.0, newScale));
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const fencePoints = useMemo(() => {
         const R = 33;
         const points = [];
         for (let theta = 0; theta <= Math.PI / 2; theta += 0.12) {
             points.push({
                 theta,
-                x: R * Math.sin(theta),
+                x: (R * fenceXScale) * Math.sin(theta), // Scale X Only
                 y: 100 - R * Math.cos(theta),
                 isGap: (theta > 0.72 && theta < 0.85)
             });
         }
         return points;
-    }, []);
+    }, [fenceXScale]);
 
     // --- 5. Dead Sheep Placement (Distributed in Top-Left Graveyard) ---
     const GRAVE_SLOTS = useMemo(() => [
@@ -167,7 +207,7 @@ export const Field = ({ onSelectSheep }) => {
                 ...s,
                 x: slot.x + jitterX,
                 y: slot.y + jitterY,
-                zIndex: Math.floor(1000 - slot.y) // Correct Z for Graves
+                zIndex: 15 // Layer: Bottom (Graves)
             };
         });
     }, [deadSheep, graveLimit, GRAVE_SLOTS]);
@@ -241,7 +281,7 @@ export const Field = ({ onSelectSheep }) => {
 
     return (
         <div className={`field-container ${weather?.type || 'sunny'} ${weather?.isDay ? 'day' : 'night'}`}
-            style={{ background: 'transparent', position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}
+            style={{ background: 'transparent', position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden' }}
         >
             {/* Dynamic Background SVG - zIndex 0 - Aligned to Top */}
             <BackgroundSVG isDay={weather?.isDay} weatherType={weather?.type} />
@@ -253,6 +293,17 @@ export const Field = ({ onSelectSheep }) => {
                 zIndex: 1,
                 overflow: 'visible'
             }}>
+                {/* --- Shared Definitions --- */}
+                <svg width="0" height="0" style={{ position: 'absolute' }}>
+                    <defs>
+                        <filter id="rail-shadow">
+                            <feDropShadow dx="1" dy="1" stdDeviation="1" floodOpacity="0.3" />
+                        </filter>
+                        <filter id="post-shadow" x="-50%" y="-20%" width="200%" height="200%">
+                            <feDropShadow dx="1" dy="1" stdDeviation="1" floodOpacity="0.4" />
+                        </filter>
+                    </defs>
+                </svg>
 
                 {/* Graveyard Zone Highlight (SVG) */}
                 <GraveyardZone />
@@ -260,13 +311,8 @@ export const Field = ({ onSelectSheep }) => {
                 {/* --- Fence Rails SVG Layer --- */}
                 <svg style={{
                     position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                    zIndex: 5, pointerEvents: 'none', overflow: 'visible'
+                    zIndex: 20, pointerEvents: 'none', overflow: 'visible' // Layer: Middle (Fence Rails)
                 }}>
-                    <defs>
-                        <filter id="rail-shadow">
-                            <feDropShadow dx="1" dy="1" stdDeviation="1" floodOpacity="0.3" />
-                        </filter>
-                    </defs>
                     <g filter="url(#rail-shadow)">
                         {fencePoints.map((p, i) => {
                             if (i >= fencePoints.length - 1) return null;
@@ -298,8 +344,10 @@ export const Field = ({ onSelectSheep }) => {
                     const baseScale = 1.1 - (d.y / 200);
                     const finalScale = baseScale * (d.scale || 1);
 
-                    // Fix Z-Index: Far (y=100) = Low, Near (y=0) = High
-                    const zIdx = Math.floor(1000 - d.y);
+                    // Fix Z-Index Layers
+                    let zIdx = Math.floor(1000 - d.y);
+                    if (d.type === 'fence-post') zIdx = 25; // Layer: Middle (Fence Posts)
+                    if (d.type === 'sign') zIdx = 30; // Layer: Top (Signs)
 
                     if (d.type === 'fence-post') {
                         return (
@@ -312,11 +360,6 @@ export const Field = ({ onSelectSheep }) => {
                                 pointerEvents: 'none'
                             }}>
                                 <svg viewBox="0 0 10 40" style={{ overflow: 'visible' }}>
-                                    <defs>
-                                        <filter id="post-shadow" x="-50%" y="-20%" width="200%" height="200%">
-                                            <feDropShadow dx="1" dy="1" stdDeviation="1" floodOpacity="0.4" />
-                                        </filter>
-                                    </defs>
                                     <g filter="url(#post-shadow)">
                                         <rect x="3" y="0" width="4" height="40" fill="#4a3b32" rx="1" />
                                         <path d="M5,-5 L2,0 L8,0 Z" fill="#4a3b32" />
@@ -391,7 +434,12 @@ export const Field = ({ onSelectSheep }) => {
             {(weather?.type === 'rain' || weather?.type === 'storm' || weather?.type === 'snow') && (
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 100 }}>
                     <svg width="100%" height="100%" style={{ overflow: 'hidden' }}>
-                        {(weather.type === 'rain' || weather.type === 'storm') && <ForegroundRain />}
+                        {(weather.type === 'rain' || weather.type === 'storm') && (
+                            <ForegroundRain
+                                key={`rain-${weather.type}`} // FORCE REMOUNT on switch
+                                isStorm={weather.type === 'storm'}
+                            />
+                        )}
                         {weather.type === 'snow' && <ForegroundSnow />}
                     </svg>
                 </div>
