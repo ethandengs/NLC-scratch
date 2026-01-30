@@ -468,7 +468,6 @@ export const GameProvider = ({ children }) => {
             });
 
         setSheep(decaySheep);
-        setSheep(decaySheep);
         setInventory(loadedData.inventory || []);
         // setNotificationEnabled(loadedData.settings?.notify || false); // Removed
         if (loadedData.settings) {
@@ -482,12 +481,7 @@ export const GameProvider = ({ children }) => {
             localStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
                 sheep: decaySheep,
                 inventory: loadedData.inventory || [],
-                localStorage.setItem(`sheep_game_data_${targetUser}`, JSON.stringify({
-                    sheep: decaySheep,
-                    inventory: loadedData.inventory || [],
-                    settings: loadedData.settings || { notify: false }, // Save setting
-                    lastSave: now
-                }));
+                settings: loadedData.settings || { notify: false }, // Save setting
                 lastSave: now
             }));
         }
