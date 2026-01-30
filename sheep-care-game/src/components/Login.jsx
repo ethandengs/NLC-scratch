@@ -1,16 +1,42 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 
 export const Login = () => {
-    const { loginWithLine, isLoading, message } = useGame();
+    const { loginWithLine, loginAsAdmin, isLoading, message, isInClient } = useGame();
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    // Default to Admin Login if NOT in LINE Client (e.g. Browser)
+    const [showAdminLogin, setShowAdminLogin] = useState(!isInClient);
+    const [adminUser, setAdminUser] = useState('');
+    const [adminPass, setAdminPass] = useState('');
+
+    // Update state if isInClient changes (e.g. init finished)
+    useEffect(() => {
+        if (!isInClient) {
+            setShowAdminLogin(true);
+        } else {
+            setShowAdminLogin(false);
+        }
+    }, [isInClient]);
+
+
+    const handleAdminLogin = (e) => {
+        e.preventDefault();
+        // Check Credentials - Username only per request
+        const validUser = import.meta.env.VITE_ADMIN_USER || 'admin';
+
+        if (adminUser === validUser) {
+            loginAsAdmin();
+        } else {
+            alert('帳號錯誤');
+        }
+    };
 
     return (
         <div className="debug-editor-overlay" style={{ background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' }}>
             <div className="simple-editor" style={{ width: '320px', textAlign: 'center', padding: '30px' }}>
                 <h2 style={{ margin: '0 0 20px 0' }}>
-                    🐑 牧羊人登入
+                    {showAdminLogin ? '🔧 管理員後台' : '🐑 牧羊人登入'}
                 </h2>
 
                 {/* Status Message */}
@@ -30,23 +56,64 @@ export const Login = () => {
                     </div>
                 ) : (
                     <div>
-                        <p style={{ color: '#555', marginBottom: '20px', lineHeight: '1.5' }}>
-                            歡迎回到牧場！<br />
-                            請使用 LINE 帳號直接登入<br />
-                        </p>
+                        {!showAdminLogin ? (
+                            // LINE LOGIN VIEW (Default for Mobile)
+                            <>
+                                <p style={{ color: '#555', marginBottom: '20px', lineHeight: '1.5' }}>
+                                    歡迎回到牧場！<br />
+                                    請使用 LINE 帳號直接登入<br />
+                                </p>
 
-                        <button
-                            onClick={loginWithLine}
-                            className="line-login-btn"
-                            style={isLocal ? { background: '#666' } : {}}
-                        >
-                            <span style={{ marginRight: '10px', fontSize: '1.2rem', fontWeight: 'bold' }}>{isLocal ? '🛠️' : 'LINE'}</span>
-                            {isLocal ? 'Test Login' : 'Login 登入'}
-                        </button>
+                                <button
+                                    onClick={loginWithLine}
+                                    className="line-login-btn"
+                                    style={isLocal ? { background: '#666' } : {}}
+                                >
+                                    <span style={{ marginRight: '10px', fontSize: '1.2rem', fontWeight: 'bold' }}>{isLocal ? '🛠️' : 'LINE'}</span>
+                                    {isLocal ? 'Test Login' : 'Login 登入'}
+                                </button>
 
-                        <p style={{ marginTop: '20px', fontSize: '0.8rem', color: '#999' }}>
-                            第一次登入將自動建立新帳號
-                        </p>
+                                <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                    <button
+                                        onClick={() => setShowAdminLogin(true)}
+                                        style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem' }}
+                                    >
+                                        Admin Access
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            // ADMIN LOGIN VIEW (Default for Browser)
+                            <form onSubmit={handleAdminLogin} style={{ textAlign: 'left' }}>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '5px' }}>帳號</label>
+                                    <input
+                                        type="text"
+                                        value={adminUser}
+                                        onChange={(e) => setAdminUser(e.target.value)}
+                                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                                        placeholder="預設: admin"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        type="submit"
+                                        style={{ flex: 1, padding: '10px', background: '#333', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}
+                                    >
+                                        登入
+                                    </button>
+                                </div>
+                                <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAdminLogin(false)}
+                                        style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem' }}
+                                    >
+                                        切換至 LINE 登入
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 )}
             </div>
