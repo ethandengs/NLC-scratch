@@ -73,14 +73,16 @@ export const Login = () => {
                                     {isLocal ? 'Test Login' : 'Login 登入'}
                                 </button>
 
-                                <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-                                    <button
-                                        onClick={() => setShowAdminLogin(true)}
-                                        style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem' }}
-                                    >
-                                        Admin Access
-                                    </button>
-                                </div>
+                                {!isInClient && (
+                                    <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                                        <button
+                                            onClick={() => setShowAdminLogin(true)}
+                                            style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem' }}
+                                        >
+                                            Admin Access
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             // ADMIN LOGIN VIEW (Default for Browser)
