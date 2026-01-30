@@ -218,14 +218,17 @@ export const GameProvider = ({ children }) => {
             const notifySetting = overrides.notificationEnabled ?? notificationEnabled;
             const currentNickname = overrides.nickname !== undefined ? overrides.nickname : nickname;
 
-            // Construct gameData object (Fix: was missing)
-            // Construct gameData object (Fix: Merge settings, don't overwrite)
-            // We use stateRef.current.settings as base, then apply overrides if any (currently only notify passes override)
-            // Actually, we should merge the override into the base.
+            // Construct gameData object
+            // If overrides.settings exists, use it as the authoritative source.
+            // Otherwise use Ref.
+            const rawSettings = overrides.settings || stateRef.current.settings;
 
+            // HEAL ON SAVE: Force merge with defaults to ensure keys like maxVisibleSheep are never lost.
+            // Even if state was partial, this restores structure.
             const currentSettings = {
-                ...stateRef.current.settings, // Correct source of truth
-                ...overrides // Apply any logic overrides if necessary (rarely used now for settings)
+                maxVisibleSheep: 20, // Default Safety Net
+                notify: false,
+                ...rawSettings
             };
 
             const gameData = {
@@ -318,6 +321,18 @@ export const GameProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('sheep_user_location', JSON.stringify(location));
     }, [location]);
+
+    // Auto-Save Settings Logic (Debounced)
+    useEffect(() => {
+        if (!isDataLoaded) return; // Don't save defaults over cloud data on boot
+
+        const timer = setTimeout(() => {
+            console.log("Auto-saving settings change...", settings);
+            saveToCloud(); // Uses Ref, which is synced by the other effect
+        }, 1000); // 1s debounce
+
+        return () => clearTimeout(timer);
+    }, [settings, isDataLoaded]);
 
     const updateUserLocation = async (cityName) => {
         const importWeather = await import('../utils/weatherService');
