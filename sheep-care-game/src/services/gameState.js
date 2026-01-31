@@ -290,7 +290,8 @@ export const gameState = {
                 // However, previous logic in saveUserProfile was "Upsert".
                 // To do Upsert via REST: POST with Prefer: resolution=merge-duplicates
 
-                const url = `${supabaseUrl}/rest/v1/users`;
+                // Correct REST Upsert: Must specify on_conflict if not using PK.
+                const url = `${supabaseUrl}/rest/v1/users?on_conflict=line_id`;
                 const payload = {
                     line_id: userId,
                     ...userProfile,
