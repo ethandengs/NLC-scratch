@@ -53,6 +53,31 @@ export const SettingsModal = ({ onClose }) => {
                     </p>
                 </div>
 
+                <div style={{ marginBottom: '20px' }}>
+                    <button
+                        onClick={() => {
+                            useGame().saveToCloud();
+                            // Optional: Show a toast? saveToCloud already does showMessage.
+                        }}
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: '#e3f2fd',
+                            color: '#1565c0',
+                            border: '1px solid #90caf9',
+                            borderRadius: '8px',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                        }}
+                    >
+                        ☁️ 手動備份至雲端
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#999', textAlign: 'center', marginTop: '5px' }}>
+                        (通常關閉視窗時會自動儲存)
+                    </p>
+                </div>
+
                 <button
                     onClick={onClose}
                     style={{

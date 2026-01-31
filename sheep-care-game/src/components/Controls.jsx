@@ -38,24 +38,7 @@ export const Controls = ({ onOpenList }) => {
                     📋
                 </button>
 
-                {/* Manual Save Button (For Debugging Persistence) */}
-                <button
-                    className="action-btn"
-                    style={{
-                        background: '#e3f2fd',
-                        color: '#1565c0',
-                        border: '1px solid #90caf9',
-                        width: '60px', height: '60px',
-                        borderRadius: '20px',
-                        fontSize: '1.5rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 0 #64b5f6'
-                    }}
-                    onClick={() => useGame().saveToCloud()} // Force Save
-                    title="強制存檔"
-                >
-                    💾
-                </button>
+
 
                 {/* Add Sheep Button (Primary Action) */}
                 <button
