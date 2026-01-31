@@ -2,6 +2,22 @@ import { supabase, supabaseUrl, supabaseKey } from './supabaseClient';
 import { calculateOfflineDecay, sanitizeSheep } from '../utils/gameLogic';
 
 export const gameState = {
+    // Helper: Get ISO string with local timezone offset (e.g. +08:00)
+    _getLocalISOString() {
+        const date = new Date();
+        const tzo = -date.getTimezoneOffset();
+        const dif = tzo >= 0 ? '+' : '-';
+        const pad = (num) => (num < 10 ? '0' : '') + num;
+        return date.getFullYear() +
+            '-' + pad(date.getMonth() + 1) +
+            '-' + pad(date.getDate()) +
+            'T' + pad(date.getHours()) +
+            ':' + pad(date.getMinutes()) +
+            ':' + pad(date.getSeconds()) +
+            '.' + String((date.getMilliseconds() / 1000).toFixed(3)).slice(2, 5) +
+            dif + pad(Math.floor(Math.abs(tzo) / 60)) + ':' + pad(Math.abs(tzo) % 60);
+    },
+
     // Load all data (User + Sheep) and apply offline logic
     // Now accepts userId (LINE ID string) directly
     async loadGame(userId) {
@@ -86,7 +102,7 @@ export const gameState = {
         // 4. Update Last Login (Schema: 'last_login')
         await supabase
             .from('users')
-            .update({ last_login: now.toISOString() })
+            .update({ last_login: this._getLocalISOString() })
             .eq('line_id', userId);
 
         return { user: profile, sheep: updatedSheepList };
@@ -209,15 +225,15 @@ export const gameState = {
             return;
         }
 
-        // Force UPSERT to ensure data is saved even if row seems missing to a simple update
-        // This solves "0 rows affected" issues or race conditions.
+        // Strategy: UPSERT (Insert or Update) - Matches Sheep Logic
+        // NOW WORKS because we added UNIQUE constraint to line_id in V16.
         const payload = {
             line_id: userId,
-            ...updates,
-            updated_at: new Date().toISOString()
+            ...updates
+            // updated_at removed as column does not exist
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('users')
             .upsert(payload, { onConflict: 'line_id' })
             .select();
@@ -225,7 +241,7 @@ export const gameState = {
         if (error) {
             console.error('Error saving user profile:', error);
         } else {
-            // console.log(`User profile saved for ${userId}`);
+            console.log(`User profile saved for ${userId} (Upsert)`);
         }
     },
 
@@ -243,7 +259,7 @@ export const gameState = {
 
         const payload = {
             ...this._toDbSheep({ ...sheep, skinId }),
-            created_at: new Date().toISOString()
+            created_at: this._getLocalISOString()
         };
         if (!payload.id) delete payload.id;
 
@@ -284,18 +300,14 @@ export const gameState = {
         // 1. Save Profile
         if (userProfile) {
             try {
-                // Ensure we use the correct Upsert logic logic via REST or just Update if we trust it exists (we do now)
-                // Actually to match Upsert logic: POST to /users with on_conflict=line_id
-                // But simplified: PATCH is Update. If we are sure user exists (which we are), PATCH is fine.
-                // However, previous logic in saveUserProfile was "Upsert".
-                // To do Upsert via REST: POST with Prefer: resolution=merge-duplicates
-
-                // Correct REST Upsert: Must specify on_conflict if not using PK.
+                // Strategy: REST UPSERT (POST)
+                // Now works thanks to V16 Unique Constraint
+                // Must specify on_conflict for REST upsert to work on non-PK
                 const url = `${supabaseUrl}/rest/v1/users?on_conflict=line_id`;
                 const payload = {
                     line_id: userId,
-                    ...userProfile,
-                    updated_at: new Date().toISOString()
+                    ...userProfile
+                    // updated_at removed
                 };
 
                 fetch(url, {

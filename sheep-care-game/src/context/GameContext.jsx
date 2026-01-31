@@ -215,7 +215,7 @@ export const GameProvider = ({ children }) => {
         try {
             const currentSheep = overrides.sheep || sheep;
             const currentInventory = overrides.inventory || inventory;
-            const notifySetting = overrides.notificationEnabled ?? notificationEnabled;
+            // notificationEnabled is removed. We rely on settings object now.
             const currentNickname = overrides.nickname !== undefined ? overrides.nickname : nickname;
 
             // Construct gameData object
@@ -243,12 +243,31 @@ export const GameProvider = ({ children }) => {
                 setMessage("☁️ 儲存中...");
             }
 
+            // Debug: Log the exact data being sent
+            console.log("Saving to Cloud:", { userId: lineId, gameData, currentSheep });
+
+            // Helper for Local ISO String (Inline)
+            const getLocalISOString = () => {
+                const date = new Date();
+                const tzo = -date.getTimezoneOffset();
+                const dif = tzo >= 0 ? '+' : '-';
+                const pad = (num) => (num < 10 ? '0' : '') + num;
+                return date.getFullYear() +
+                    '-' + pad(date.getMonth() + 1) +
+                    '-' + pad(date.getDate()) +
+                    'T' + pad(date.getHours()) +
+                    ':' + pad(date.getMinutes()) +
+                    ':' + pad(date.getSeconds()) +
+                    '.' + String((date.getMilliseconds() / 1000).toFixed(3)).slice(2, 5) +
+                    dif + pad(Math.floor(Math.abs(tzo) / 60)) + ':' + pad(Math.abs(tzo) % 60);
+            };
+
             await Promise.all([
                 gameState.saveAllSheep(currentSheep),
                 gameState.saveUserProfile(lineId, {
                     game_data: gameData,
                     nickname: currentNickname,
-                    last_login: new Date().toISOString()
+                    last_login: getLocalISOString()
                 })
             ]);
 
