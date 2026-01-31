@@ -1,14 +1,15 @@
 #root {
-  /* Clean Ceramic Theme */
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-  /* Softer, broader shadow */
-  --glass-blur: blur(8px);
-  /* Reduce blur slightly for crispness */
-  --btn-shadow: 0 4px 0;
-  /* Subtler button depth */
-  --btn-shadow-active: 0 3px 0;
+  /* Clean Cream/Ceramic Theme */
+  --glass-bg: var(--color-primary-cream);
+  --glass-border: 1px solid rgba(141, 110, 99, 0.2);
+  /* Soft brown border */
+  --glass-shadow: var(--shadow-soft);
+
+  --glass-blur: blur(12px);
+
+  --btn-shadow: 0 4px 0 rgba(93, 64, 55, 0.1);
+  --btn-shadow-active: 0 2px 0 rgba(93, 64, 55, 0.1);
+
 
   max-width: 1280px;
   margin: 0 auto;

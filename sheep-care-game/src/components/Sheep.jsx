@@ -1,5 +1,5 @@
 import React from 'react';
-import { SheepVisual } from './SheepVisual';
+import { AssetSheep } from './AssetSheep';
 import { SHEEP_TYPES } from '../data/sheepData';
 
 export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
@@ -84,15 +84,14 @@ export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
                 }}
                 onClick={handleInteract}
             >
-                <SheepVisual
+                <AssetSheep
                     type={sheep.type}
                     state={sheep.state}
                     status={sheep.status}
                     visual={sheep.visual}
                     health={sheep.health}
                     direction={sheep.direction}
-                    isReversing={sheep.isReversing}
-                    centered={true} // Fill wrapper relative
+                    centered={true}
                 />
             </div>
 
