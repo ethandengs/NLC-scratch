@@ -5,19 +5,11 @@ export const Login = () => {
     const { loginWithLine, loginAsAdmin, isLoading, message, isInClient } = useGame();
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    // Default to Admin Login if NOT in LINE Client (e.g. Browser)
-    const [showAdminLogin, setShowAdminLogin] = useState(!isInClient);
-    const [adminUser, setAdminUser] = useState('');
-    const [adminPass, setAdminPass] = useState('');
+    // Default to LINE Login (Standard for all users)
+    const [showAdminLogin, setShowAdminLogin] = useState(false);
 
-    // Update state if isInClient changes (e.g. init finished)
-    useEffect(() => {
-        if (!isInClient) {
-            setShowAdminLogin(true);
-        } else {
-            setShowAdminLogin(false);
-        }
-    }, [isInClient]);
+    // Effect removed: We no longer auto-switch to Admin login if not in client.
+    // Users can manually click "Admin Access" if needed.
 
 
     const handleAdminLogin = (e) => {
