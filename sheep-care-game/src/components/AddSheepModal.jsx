@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { SheepVisual } from './SheepVisual'; // Import for preview
+import { AssetSheep } from './AssetSheep'; // Import for preview
 import { generateVisuals, parseMaturity } from '../utils/gameLogic';
 
 const COLORS = [
