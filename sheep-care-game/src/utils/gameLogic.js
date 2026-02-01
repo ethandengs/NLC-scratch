@@ -1,5 +1,5 @@
 // --- Constants ---
-const BOUNDS = { minX: 10, maxX: 90, minY: 1, maxY: 90 };
+const BOUNDS = { minX: 5, maxX: 95, minY: 15, maxY: 68 };
 const GRAVEYARD_RADIUS = 33; // Fan shape from Top-Left (x=0, y=100)
 
 // Configuration for game balance

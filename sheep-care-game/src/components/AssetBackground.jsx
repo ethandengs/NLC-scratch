@@ -23,7 +23,7 @@ export const AssetBackground = ({ userId, weather }) => {
                         style={{
                             position: 'absolute',
                             top: `${10 + (i * 5)}%`,
-                            width: `${15 + (i * 5)}%`,
+                            width: `${8 + (i * 3)}%`,
                             opacity: 0.8
                         }}
                         initial={{ x: `${-20 - (i * 20)}%` }}
@@ -47,7 +47,8 @@ export const AssetBackground = ({ userId, weather }) => {
                         position: 'absolute',
                         left: `${m.x}%`,
                         bottom: `${m.y}%`,
-                        transform: `translate(-50%, 0) scale(${m.scale})`,
+                        // Pivot: Move down by 20% of element height to bury base
+                        transform: `translate(-50%, 20%) scale(${m.scale})`,
                         zIndex: 2,
                         opacity: 0.9
                     }}
@@ -89,7 +90,8 @@ export const AssetBackground = ({ userId, weather }) => {
                     style={{
                         position: 'absolute',
                         left: `${t.x}%`,
-                        bottom: `${t.y}%`,
+                        // Pivot: Bottom is Horizon Y - 20% of Height
+                        bottom: `calc(${t.y}% - ${(150 * t.scale) * 0.2}px)`,
                         height: `${150 * t.scale}px`,
                         zIndex: 5,
                         transformOrigin: 'bottom center'

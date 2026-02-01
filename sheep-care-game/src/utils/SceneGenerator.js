@@ -33,14 +33,34 @@ export const generateScene = (userId = 'guest') => {
     const rng = new SeededRandom(userId);
     const elements = [];
 
+    // --- Helper: Check Collision (Simple Distance Check) ---
+    // Returns true if position (x, y) collides with any existing element of similar type
+    // We treat x as primary factor (horizontal overlap) because y provides depth.
+    // However, for pure 2D composition, we check Euclidean distance scaled for aspect ratio.
+    const isColliding = (x, y, existingElements, threshold = 8) => {
+        for (let el of existingElements) {
+            // Only check collision against same 'layer' or visually similar items
+            // But here we just want to avoid clutter generally.
+            const dx = x - el.x;
+            const dy = (y - el.y) * 2; // Weight Y more heavily? No, usually Y is depth.
+            // Let's just check simple distance.
+            const dist = Math.sqrt(dx * dx + (y - el.y) * (y - el.y));
+            if (dist < threshold) return true;
+        }
+        return false;
+    };
+
     // --- 1. MOUNTAIN ZONE (Deep Background) ---
     // y: 65%+, Sits on horizon
     const numMountains = Math.floor(rng.range(2, 4));
+    const mountainAssets = ASSETS.ENVIRONMENT.MOUNTAINS.BG;
     for (let i = 0; i < numMountains; i++) {
+        // Pick random variant
+        const src = mountainAssets[Math.floor(rng.range(0, mountainAssets.length))];
         elements.push({
             id: `mtn-${i}`,
             type: 'MOUNTAIN',
-            src: ASSETS.ENVIRONMENT.MOUNTAINS.BG,
+            src: src,
             x: rng.range(0, 100),
             y: rng.range(65, 70), // On Horizon
             scale: rng.range(2, 3),
@@ -49,20 +69,37 @@ export const generateScene = (userId = 'guest') => {
     }
 
     // --- 2. HORIZON ZONE (Tree Line) ---
-    // y: ~60-65%
-    // Dense line of trees to block the bottom of mountains
-    const numTrees = Math.floor(rng.range(15, 25));
+    // y: Fixed at 65% (Horizon Line)
+    // Dense line of trees, STRICTLY GROUNDED.
+    const numTrees = Math.floor(rng.range(12, 18)); // Slightly reduced from 25 to avoid chaos
+    const trees = [];
     for (let i = 0; i < numTrees; i++) {
-        elements.push({
-            id: `tree-${i}`,
-            type: 'TREE',
-            src: getRandomAsset(ASSETS.DECORATIONS.TREES),
-            x: rng.range(-10, 110),
-            y: rng.range(62, 68), // sit on horizon
-            scale: rng.range(0.5, 0.9), // Smaller because they are far
-            zIndex: 5
-        });
+        let attempts = 0;
+        let x = 0;
+        let valid = false;
+
+        // Try to find a non-overlapping spot
+        while (attempts < 10 && !valid) {
+            x = rng.range(-10, 110);
+            if (!isColliding(x, 65, trees, 6)) { // Threshold 6% width
+                valid = true;
+            }
+            attempts++;
+        }
+
+        if (valid || i < 5) { // Always authorize at least 5 trees even if overlapping
+            trees.push({
+                id: `tree-${i}`,
+                type: 'TREE',
+                src: getRandomAsset(ASSETS.DECORATIONS.TREES),
+                x: x,
+                y: 65, // STRICTLY ON HORIZON LINE
+                scale: rng.range(0.6, 1.0),
+                zIndex: 5
+            });
+        }
     }
+    elements.push(...trees);
 
     // --- 3. HORIZON EDGE (Grass Strip) ---
     // y: ~65% (Seam)
@@ -82,31 +119,49 @@ export const generateScene = (userId = 'guest') => {
 
     // --- 4. PLAY ZONE (The Field) ---
     // y: 15-60% (Between foreground and horizon)
-    const numFieldGrass = Math.floor(rng.range(10, 20));
+    const numFieldGrass = Math.floor(rng.range(8, 15)); // Reduced count
+    const fieldItems = [];
     for (let i = 0; i < numFieldGrass; i++) {
-        const y = rng.range(15, 60);
-        elements.push({
-            id: `field-grass-${i}`,
-            type: 'GRASS',
-            src: getRandomAsset(ASSETS.DECORATIONS.GRASS),
-            x: rng.range(5, 95),
-            y: y,
-            scale: rng.range(0.5, 0.8),
-            zIndex: Math.floor(100 - y) // Higher Y = Farther = Lower Z
-        });
+        let attempts = 0;
+        let x = 0, y = 0;
+        let valid = false;
+
+        while (attempts < 10 && !valid) {
+            x = rng.range(5, 95);
+            y = rng.range(15, 60);
+            // Check against other field grass
+            if (!isColliding(x, y, fieldItems, 10)) {
+                valid = true;
+            }
+            attempts++;
+        }
+
+        if (valid) {
+            fieldItems.push({
+                id: `field-grass-${i}`,
+                type: 'GRASS',
+                src: getRandomAsset(ASSETS.DECORATIONS.GRASS),
+                x: x,
+                y: y,
+                scale: rng.range(0.5, 0.8),
+                zIndex: Math.floor(100 - y) // Higher Y = Farther = Lower Z
+            });
+        }
     }
+    elements.push(...fieldItems);
 
     // --- 5. FOREGROUND ZONE (Color Block + Decoration) ---
     // y: 0-15%
     const foregroundDecor = [];
-    const numFgGrass = Math.floor(rng.range(5, 10));
+    const numFgGrass = Math.floor(rng.range(4, 8));
     for (let i = 0; i < numFgGrass; i++) {
+        // Simple scatter for foreground
         foregroundDecor.push({
             id: `fg-grass-${i}`,
             type: 'GRASS',
             src: getRandomAsset(ASSETS.DECORATIONS.GRASS),
             x: rng.range(0, 100),
-            y: rng.range(20, 80), // Relative to FG container (0-15%)
+            y: rng.range(20, 80), // Relative to FG container
             scale: rng.range(0.8, 1.2),
             zIndex: 102
         });

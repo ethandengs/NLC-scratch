@@ -8,7 +8,11 @@ export const ASSETS = {
       DAY_GRAIDENT: '/assets/environment/sky/day_gradient.svg',
     },
     MOUNTAINS: {
-      BG: '/assets/environment/mountains/mountain_bg.svg',
+      BG: [
+        '/assets/environment/mountains/mountain_bg_01.svg',
+        '/assets/environment/mountains/mountain_bg_02.svg',
+        '/assets/environment/mountains/mountain_bg_03.svg',
+      ]
     },
     CLOUDS: [
       '/assets/environment/clouds/cloud_01.svg',
