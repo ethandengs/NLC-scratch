@@ -96,7 +96,8 @@ export const generateScene = (userId = 'guest') => {
                     x: x,
                     y: HORIZON_Y,
                     scale: rng.range(scaleRange[0], scaleRange[1]),
-                    zIndex: 2 // Behind Grass Base (3) but in front of Mountains (0)
+                    zIndex: 2, // Behind Grass Base (3) but in front of Mountains (0)
+                    duration: rng.range(4, 6)
                 });
             }
         }
@@ -156,7 +157,7 @@ export const generateScene = (userId = 'guest') => {
 
         while (attempts < 10 && !valid) {
             x = rng.range(5, 95);
-            y = rng.range(15, 60);
+            y = rng.range(35, 60); // Constrained to Grass Terrain (Above 33%)
             if (!isColliding(x, y, fieldItems, 10)) valid = true;
             attempts++;
         }
@@ -175,45 +176,69 @@ export const generateScene = (userId = 'guest') => {
     }
     elements.push(...fieldItems);
 
-    // --- 5. FOREGROUND ZONE (Color Block + Decoration) ---
-    // y: 0-15%
-    const foregroundDecor = [];
+    // --- 5. FOREGROUND SEAM (Y: ~33%) ---
+    // Continuous line of Edges + Bushes
+    const fgSeamWith = [];
 
-    // A. Bushes (On Seam line, Top of FG block)
-    const numBushes = Math.floor(rng.range(3, 6));
-    for (let i = 0; i < numBushes; i++) {
-        let attempts = 0;
-        let x = 0;
-        let valid = false;
-        while (attempts < 10 && !valid) {
-            x = rng.range(5, 95);
-            if (!isColliding(x, 100, foregroundDecor, 15)) valid = true;
-            attempts++;
+    // Width map for Bushes (em)
+    const getBushWidthVal = (src) => {
+        if (src.includes('bush_01')) return 12;
+        if (src.includes('bush_02')) return 10;
+        if (src.includes('bush_03')) return 8;
+        return 10;
+    };
+
+    let fgCurrentX = -5; // Start off-screen
+    const FG_Y = 33; // 1/3 height from bottom context
+
+    while (fgCurrentX < MAX_WIDTH) {
+        // Randomly decide: Edge or Bush?
+        // Bushes should be less frequent than edges to look nice
+        const isBush = rng.next() > 0.7; // 30% chance of bush
+
+        let src, w, type;
+
+        if (isBush) {
+            src = getRandomAsset(ASSETS.DECORATIONS.BUSHES);
+            w = getBushWidthVal(src);
+            type = 'BUSH';
+        } else {
+            src = getRandomAsset(ASSETS.DECORATIONS.GRASS_EDGES);
+            w = getEdgeWidthVal(src);
+            type = 'HORIZON_GRASS'; // We reuse the edge asset type name or create new
         }
-        if (valid) {
-            foregroundDecor.push({
-                id: `fg-bush-${i}`,
-                type: 'BUSH',
-                src: getRandomAsset(ASSETS.DECORATIONS.BUSHES),
-                x: x,
-                y: 100, // Top of FG block
-                scale: rng.range(0.8, 1.1),
-                rotation: 0,
-                zIndex: 101
-            });
-        }
+
+        fgSeamWith.push({
+            id: `fg-seam-${fgCurrentX}`,
+            type: 'FOREGROUND_SEAM_ITEM', // New type identifier
+            subType: type, // To know which asset class it is
+            src: src,
+            x: fgCurrentX,
+            y: FG_Y,
+            width: `${w}em`,
+            scale: isBush ? rng.range(0.9, 1.1) : 1, // Slight variation for bushes
+            zIndex: 101
+        });
+
+        fgCurrentX += (w + 0.4); // Gap 0.4em consistent with horizon
     }
 
-    // B. FG Grass (Scattered)
-    const numFgGrass = Math.floor(rng.range(4, 8));
+    // Add to specific 'foregroundSeam' list in output, or main elements
+    // We'll add to elements with high Z-index, but distinctive ID
+    elements.push(...fgSeamWith);
+
+    // --- 6. FOREGROUND DECOR (Scattered Grass ONLY) ---
+    // Scattered grass on the Foreground Block surface (0-33%)
+    const foregroundDecor = [];
+    const numFgGrass = Math.floor(rng.range(6, 12));
     for (let i = 0; i < numFgGrass; i++) {
         foregroundDecor.push({
             id: `fg-grass-${i}`,
             type: 'GRASS',
             src: getRandomAsset(ASSETS.DECORATIONS.GRASS),
             x: rng.range(0, 100),
-            y: rng.range(20, 80),
-            scale: rng.range(0.8, 1.2),
+            y: rng.range(5, 30), // Within the 33% block
+            scale: rng.range(1.0, 1.4), // Larger in FG
             zIndex: 102
         });
     }
@@ -246,7 +271,8 @@ export const generateScene = (userId = 'guest') => {
                 src: cloudAssets[i % cloudAssets.length],
                 x: x,
                 y: y,
-                scale: rng.range(0.8, 1.2)
+                scale: rng.range(0.8, 1.2),
+                duration: rng.range(20, 30) // Deterministic duration
             })
         }
     }

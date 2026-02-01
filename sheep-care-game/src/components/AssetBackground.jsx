@@ -31,7 +31,7 @@ export const AssetBackground = ({ userId, weather }) => {
                         initial={{ x: 0 }}
                         animate={{ x: ['-10%', '10%'] }} // Gentle drift, not full crossing
                         transition={{
-                            duration: 20 + Math.random() * 10,
+                            duration: cloud.duration,
                             repeat: Infinity,
                             repeatType: 'reverse',
                             ease: 'easeInOut'
@@ -73,7 +73,7 @@ export const AssetBackground = ({ userId, weather }) => {
                     }}
                     animate={{ rotate: [-2, 2, -2] }}
                     transition={{
-                        duration: 4 + Math.random() * 2,
+                        duration: t.duration,
                         repeat: Infinity,
                         ease: 'easeInOut'
                     }}
@@ -98,7 +98,7 @@ export const AssetBackground = ({ userId, weather }) => {
                     src={g.src}
                     style={{
                         position: 'absolute',
-                        position: 'absolute',
+
                         left: `${g.x}em`, // EM based for continuous strip
                         bottom: `65%`, // Explicit alignment with horizontal line
                         width: g.width || '20px',
@@ -128,28 +128,33 @@ export const AssetBackground = ({ userId, weather }) => {
 
             {/* --- 6. FOREGROUND ZONE (Token Color Block) (Z=100) --- */}
             <div style={{
-                position: 'absolute', bottom: 0, left: 0, width: '100%', height: '15%',
-                zIndex: 100 // On top of everything
+                position: 'absolute', bottom: 0, left: 0, width: '100%', height: '100%', // Container covers full screen to allow FG elements to be placed relatively if needed, but actually we just need a container.
+                // Actually the previous code had height 15%. Let's make it a full overlay or just a container.
+                // The FG block itself is 33%.
+                pointerEvents: 'none',
+                zIndex: 100
             }}>
-                {/* A. Base Block */}
+                {/* A. Base Block (The actual terrain) */}
                 <div style={{
-                    width: '100%', height: '100%',
+                    width: '100%', height: '33%',
+                    position: 'absolute', bottom: 0, left: 0,
                     background: scene.foreground.baseColor,
-                    // Simple block as requested
                 }} />
 
-                {/* B. Edge Bushes (If any) */}
-                {scene.foreground.decorations.filter(d => d.type === 'BUSH').map(b => (
+                {/* B. Foreground Seam (Line of Bushes + Edges) */}
+                {scene.elements.filter(e => e.type === 'FOREGROUND_SEAM_ITEM').map(item => (
                     <img
-                        key={b.id}
-                        src={b.src}
+                        key={item.id}
+                        src={item.src}
                         style={{
                             position: 'absolute',
-                            left: `${b.x}%`,
-                            top: `${b.y - 40}%`,
-                            width: '120px',
-                            transform: `translate(-50%, 0) scale(${b.scale}) rotate(${b.rotation}deg)`,
-                            zIndex: 101
+                            left: `${item.x}em`,
+                            bottom: `33%`,
+                            width: item.width,
+                            transform: `scale(${item.scale}) ${item.subType === 'BUSH' ? 'translateY(20%)' : ''}`,
+                            transformOrigin: 'bottom center',
+                            zIndex: 101,
+                            pointerEvents: 'none'
                         }}
                     />
                 ))}
@@ -162,8 +167,8 @@ export const AssetBackground = ({ userId, weather }) => {
                         style={{
                             position: 'absolute',
                             left: `${g.x}%`,
-                            top: `${g.y}%`,
-                            width: '1.2em', // 12px -> 1.2em base size
+                            bottom: `${g.y}%`, // Fixed: top -> bottom
+                            width: '1.2em',
                             transform: `scale(${g.scale})`,
                             zIndex: 102
                         }}
