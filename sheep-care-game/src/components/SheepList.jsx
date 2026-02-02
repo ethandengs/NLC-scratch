@@ -8,7 +8,7 @@ import '../styles/design-tokens.css';
 
 // --- Card Component ---
 // --- Card Component ---
-const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isDead, isSick }) => {
+const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isDead, isSick, isFavorite, onToggleFavorite }) => {
     return (
         <div
             className={`sheep-card ${isSelectionMode && isSelected ? 'selected' : ''}`}
@@ -48,16 +48,68 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                 </div>
             )}
 
-            {/* 1. Header (Fixed Height) */}
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', flexShrink: 0 }}>
-                {/* Health Text: Dynamic size (Smaller if 100%) */}
+            {/* Favorite Indicator / Toggle */}
+            {!isSelectionMode && (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        onToggleFavorite();
+                    }}
+                    style={{
+                        position: 'absolute', top: '4px', left: '4px', zIndex: 12, // Moved to Top-Left to avoid overlapping Right-side badges
+                        width: '24px', height: '24px', borderRadius: '50%',
+                        // background: isFavorite ? 'rgba(255, 192, 203, 0.8)' : 'rgba(255,255,255,0.6)', // Less intrusive bg
+                        // Actually, plain heart implies "Like".
+                        background: 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer',
+                        transform: isFavorite ? 'scale(1.2)' : 'scale(1)',
+                        transition: 'all 0.2s',
+                        filter: isFavorite ? 'drop-shadow(0 2px 4px rgba(255,0,0,0.3))' : 'none'
+                    }}
+                    title={isFavorite ? "取消最愛" : "加入最愛"}
+                >
+                    <span style={{
+                        fontSize: '18px', // Slightly larger
+                        color: isFavorite ? '#FF4081' : 'rgba(0,0,0,0.2)', // Red if active, gray ghost if not
+                        // Add stroke for visibility if inactive? 
+                        // Let's make inactive standard gray outline.
+                        WebkitTextStroke: isFavorite ? '0px' : '1px #999',
+                        // Actually emoji heart is filled. 
+                        // Use text shadow maybe?
+                    }}>
+                        {isFavorite ? '❤️' : '🤍'}
+                    </span>
+                </div>
+            )
+            }
+
+            {/* 1. Header (Fixed Height) - Adjusted padding to respect Heart Icon at Top-Left */}
+            <div style={{
+                width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', // Changed to flex-end to push Badges to right
+                marginBottom: '2px', flexShrink: 0,
+                paddingLeft: '28px' // Reserve space for Heart Icon at Left
+            }}>
+                {/* Health Text: Dynamic size (Smaller if 100%) - Moved to below avatar or keep? 
+                    User wanted Heart NOT to overlap text. 
+                    Previous text was Top-Left "Health".
+                    We moved Heart to Top-Left. 
+                    So we pushed header content to Right.
+                */}
+
+                {/* Health Text */}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '2px',
                     fontSize: Math.ceil(s.health || 0) >= 100 ? 'clamp(0.8rem, 3.5vw, 1.0rem)' : 'clamp(0.9rem, 4vw, 1.1rem)',
-                    color: 'var(--color-action-pink)', fontWeight: 'bold'
+                    color: 'var(--color-action-pink)', fontWeight: 'bold',
+                    marginRight: 'auto' // Push back to left if possible?
+                    // No, if we push to left it overlaps heart.
+                    // Let's put Health Text back to Left but with margin.
                 }}>
+                    {/* Actually, let's just use the paddingLeft we added to container. */}
                     <span style={{ fontSize: '1.2em' }}>♥</span> <span>{Math.ceil(s.health || 0)}%</span>
                 </div>
+
                 {/* Status Badge: No wrap, dynamic size */}
                 <div style={{
                     background: isDead ? '#9E9E9E' : (isSick ? '#FF5252' : 'var(--color-badge-orange)'),
@@ -108,13 +160,13 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 
 // --- Main List Component ---
 export const SheepList = ({ onSelect }) => {
-    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep } = useGame();
+    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep, settings, toggleFavorite } = useGame();
     // Re-instating the full list component code to be safe, but focusing on the style injection.
     const sortedSheep = [...(sheep || [])].sort((a, b) => a.id - b.id);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -131,21 +183,29 @@ export const SheepList = ({ onSelect }) => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
         const isDead = s.status === 'dead';
         const isSick = s.status === 'sick';
+        const isFavorite = settings?.favoriteSheepIds?.includes(s.id);
+
         if (!matchesSearch) return false;
         if (filterStatus === 'DEAD') return isDead;
         if (filterStatus === 'SICK') return isSick;
         if (filterStatus === 'HEALTHY') return !isDead && !isSick;
+        if (filterStatus === 'FAVORITE') return isFavorite;
         return true;
-    }), [sortedSheep, searchTerm, filterStatus]);
+    }), [sortedSheep, searchTerm, filterStatus, settings?.favoriteSheepIds]);
 
     const counts = useMemo(() => sortedSheep.reduce((acc, s) => {
         const isDead = s.status === 'dead';
         const isSick = s.status === 'sick';
+        const isFavorite = settings?.favoriteSheepIds?.includes(s.id);
+
         if (isDead) acc.DEAD++;
         else if (isSick) acc.SICK++;
         else acc.HEALTHY++;
+
+        if (isFavorite) acc.FAVORITE++;
+
         return acc;
-    }, { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, DEAD: 0 }), [sortedSheep]);
+    }, { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, DEAD: 0, FAVORITE: 0 }), [sortedSheep, settings?.favoriteSheepIds]);
 
     const toggleSelection = (id) => {
         const newSet = new Set(selectedIds);
@@ -385,6 +445,7 @@ export const SheepList = ({ onSelect }) => {
                                 {/* 3. Filters */}
                                 {[
                                     { id: 'ALL', label: '全部' },
+                                    { id: 'FAVORITE', label: '❤️ 最愛' },
                                     { id: 'HEALTHY', label: '健康' },
                                     { id: 'SICK', label: '生病' },
                                     { id: 'DEAD', label: '離世' }
@@ -463,6 +524,9 @@ export const SheepList = ({ onSelect }) => {
                                     s={s}
                                     isSelectionMode={isSelectionMode}
                                     isSelected={selectedIds.has(s.id)}
+                                    // Pass Favorite Props
+                                    isFavorite={settings?.favoriteSheepIds?.includes(s.id)}
+                                    onToggleFavorite={() => toggleFavorite && toggleFavorite(s.id)}
                                     onSelect={(sheep) => {
                                         if (onSelect) onSelect(sheep);
                                     }}

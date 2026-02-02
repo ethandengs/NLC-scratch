@@ -24,13 +24,20 @@ export const gameState = {
         if (!userId) return null;
 
         // 1. Get User Profile (Using 'line_id' from user schema)
-        let { data: profile } = await supabase
+        let { data: profile, error: fetchError } = await supabase
             .from('users')
             .select('*')
             .eq('line_id', userId)
             .single();
 
+        // FIX: Check for errors distinct from "Not Found"
+        if (fetchError && fetchError.code !== 'PGRST116') {
+            console.error("Critical Login Error:", fetchError);
+            throw new Error(`Login failed due to network or server error: ${fetchError.message}`);
+        }
+
         if (!profile) {
+            // Create profile if missing (Only if confirmed not found)
             // Create profile if missing
             const { data: newProfile, error } = await supabase
                 .from('users')

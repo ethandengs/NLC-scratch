@@ -14,38 +14,59 @@ export const Field = ({ onSelectSheep }) => {
     const deadSheep = useMemo(() => sheep.filter(s => s.status === 'dead'), [sheep]);
 
     // --- 2. Living Sheep Rotation (Existing Logic) ---
-    const [visibleLivingIds, setVisibleLivingIds] = useState(new Set());
+    // --- 2. Visibility Logic (Pinned > Random) ---
+    // Consolidated Living + Dead limit enforcement
+    const [visibleIds, setVisibleIds] = useState(new Set());
 
     useEffect(() => {
         const updateVisible = () => {
-            if (!livingSheep || livingSheep.length === 0) return;
+            if (!sheep || sheep.length === 0) return;
             const max = settings?.maxVisibleSheep || 15;
+            const favoriteIds = settings?.favoriteSheepIds || [];
 
-            if (livingSheep.length <= max) {
-                setVisibleLivingIds(new Set(livingSheep.map(s => s.id)));
-                return;
+            // 1. Separate Favorites and Others (Living + Dead mixed)
+            // We want to verify ID existence in current sheep list
+            const currentSheepIds = new Set(sheep.map(s => s.id));
+            const activeFavoriteIds = favoriteIds.filter(id => currentSheepIds.has(id));
+
+            let finalIds = [];
+
+            // 2. Add Favorites (Up to Max)
+            // If user favorites more than max, we slice to max (Performance Safety)
+            // They should increase Max setting if they want to see more.
+            const favsToTake = activeFavoriteIds.slice(0, max);
+            finalIds = [...favsToTake];
+
+            // 3. Fill Remaining Slots
+            const slotsRemaining = max - finalIds.length;
+            if (slotsRemaining > 0) {
+                // Get all unfavorited sheep
+                const unfavoritedSheep = sheep.filter(s => !finalIds.includes(s.id));
+
+                if (unfavoritedSheep.length > 0) {
+                    // Shuffle and Pick
+                    const shuffled = [...unfavoritedSheep].sort(() => 0.5 - Math.random());
+                    const selected = shuffled.slice(0, slotsRemaining);
+                    finalIds = [...finalIds, ...selected.map(s => s.id)];
+                }
             }
 
-            // Fisher-Yates Shuffle
-            const allIds = livingSheep.map(s => s.id);
-            for (let i = allIds.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [allIds[i], allIds[j]] = [allIds[j], allIds[i]];
-            }
-            setVisibleLivingIds(new Set(allIds.slice(0, max)));
+            setVisibleIds(new Set(finalIds));
         };
 
         updateVisible();
         const interval = setInterval(updateVisible, 60000); // 60s Rotation
         return () => clearInterval(interval);
-    }, [settings?.maxVisibleSheep, livingSheep.length]);
+    }, [settings?.maxVisibleSheep, settings?.favoriteSheepIds, sheep.length]); // Re-run if count changes
 
-    // Combined Visible Living Sheep
+    // Derived Lists for Rendering
     const visibleLiving = useMemo(() => {
-        if (!settings) return livingSheep;
-        if (livingSheep.length <= (settings.maxVisibleSheep || 15)) return livingSheep;
-        return livingSheep.filter(s => visibleLivingIds.has(s.id));
-    }, [livingSheep, visibleLivingIds, settings]);
+        return sheep.filter(s => s.status !== 'dead' && visibleIds.has(s.id));
+    }, [sheep, visibleIds]);
+
+    const visibleDead = useMemo(() => {
+        return sheep.filter(s => s.status === 'dead' && visibleIds.has(s.id));
+    }, [sheep, visibleIds]);
 
     // --- 3. Ghost Sheep Positioning (Random Roam Simulation) ---
     // Since dead sheep are no longer graveyard bound, we give them random positions
@@ -56,8 +77,9 @@ export const Field = ({ onSelectSheep }) => {
     // No, simple is stable: Assign random X/Y based on ID hash if X/Y is missing/zero.
 
     // Seeded random for Ghosts
+    // Seeded random for Ghosts
     const ghostSheep = useMemo(() => {
-        return deadSheep.map(s => {
+        return visibleDead.map(s => {
             // If sheep has coordinates, use them (maybe they died there).
             // But we want them to float around.
             // Let's override X/Y with a "Ghost Position".
@@ -76,7 +98,7 @@ export const Field = ({ onSelectSheep }) => {
                 zIndex: 200 // Above ground items, below UI
             };
         });
-    }, [deadSheep]);
+    }, [visibleDead]);
 
 
     if (!isLoaded) {
@@ -116,16 +138,16 @@ export const Field = ({ onSelectSheep }) => {
 
             {/* Message / HUD Overlay usually goes here via App.jsx, but if Field owns some: */}
 
-            {/* Count Overlay */}
-            {sheep.length > (visibleLiving.length + ghostSheep.length) && (
+            {/* Count Overlay: Show if Total Sheep > Currently Shown */}
+            {sheep.length > visibleIds.size && (
                 <div style={{
-                    position: 'absolute', top: '10px', right: '10px',
+                    position: 'absolute', top: '80px', right: '10px',
                     background: 'var(--color-primary-cream)', color: 'var(--color-text-brown)',
                     padding: '8px 16px', borderRadius: 'var(--radius-btn)',
                     fontSize: '0.85rem', pointerEvents: 'none', zIndex: 500,
                     boxShadow: 'var(--shadow-soft)', fontWeight: 'bold'
                 }}>
-                    👁️ {visibleLiving.length + ghostSheep.length} / {sheep.length}
+                    👁️ {visibleIds.size} / {sheep.length}
                 </div>
             )}
 
