@@ -8,11 +8,7 @@ import '../styles/design-tokens.css';
 import './SheepList.css';
 
 // --- Card Component ---
-const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isDead, isSick }) => {
-    const tagVariant = isDead ? 'dead' : (isSick ? 'sick' : (s.name.length > 3 ? 'companion' : 'new'));
-    const tagLabel = isDead ? '已離世' : (isSick ? '生病' : (s.name.length > 3 ? '夥伴' : '新朋友'));
-    const healthFull = Math.ceil(s.health || 0) >= 100;
-
+const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isDead, isSick, isPinned, onTogglePin }) => {
     return (
         <div
             className={`sheep-card ${isSelectionMode && isSelected ? 'selected' : ''} ${isSelectionMode ? 'sheep-card--select-mode' : ''}`}
@@ -27,13 +23,46 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                 </div>
             )}
 
-            <div className="sheep-card-header">
-                <div className={`sheep-card-health ${healthFull ? 'sheep-card-health--full' : ''}`}>
-                    <span className="sheep-card-health-icon">♥</span>
-                    <span>{Math.ceil(s.health || 0)}%</span>
+            {/* 1. Header (Fixed Height) */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', flexShrink: 0 }}>
+                {/* Health Text: Dynamic size (Smaller if 100%) */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '2px',
+                    fontSize: Math.ceil(s.health || 0) >= 100 ? 'clamp(0.8rem, 3.5vw, 1.0rem)' : 'clamp(0.9rem, 4vw, 1.1rem)',
+                    color: 'var(--color-action-pink)', fontWeight: 'bold'
+                }}>
+                    <span style={{ fontSize: '1.2em' }}>♥</span> <span>{Math.ceil(s.health || 0)}%</span>
                 </div>
-                <div className={`sheep-card-tag sheep-card-tag--${tagVariant}`}>
-                    {tagLabel}
+                {/* Status Badge: No wrap, dynamic size, Using Design Tokens */}
+                <div style={{
+                    background: isDead ? 'var(--palette-disabled)' : (isSick ? 'var(--palette-danger)' : (s.name.length > 3 ? 'var(--tag-seeker-bg)' : 'var(--tag-new-bg)')),
+                    color: isDead ? 'white' : (isSick ? 'white' : (s.name.length > 3 ? 'var(--tag-seeker-text)' : 'var(--tag-new-text)')),
+                    padding: '2px 6px', borderRadius: 'var(--radius-tag)', // Reduced padding
+                    fontSize: 'clamp(0.55rem, 2.5vw, 0.65rem)', fontWeight: 'bold',
+                    whiteSpace: 'nowrap', // Prevent wrapping
+                    flexShrink: 0,
+                    marginLeft: '4px' // Little spacer
+                }}>
+                    {isDead ? '已離世' : (isSick ? '生病' : s.name.length > 3 ? '夥伴' : '新朋友')}
+                </div>
+                <div className="sheep-card-header-actions" style={{ display: 'flex', gap: '4px' }}>
+                    {!isSelectionMode && (
+                        <button
+                            className="pin-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onTogglePin && onTogglePin(s.id);
+                            }}
+                            style={{
+                                background: 'transparent', border: 'none', cursor: 'pointer', padding: '0',
+                                opacity: isPinned ? 1 : 0.2, // Check logic
+                                fontSize: '1.0rem',
+                                transition: 'transform 0.2s, opacity 0.2s'
+                            }}
+                        >
+                            {isPinned ? '📌' : '📌'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -57,13 +86,13 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 
 // --- Main List Component ---
 export const SheepList = ({ onSelect }) => {
-    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep } = useGame();
+    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep, settings, togglePin } = useGame();
     // Re-instating the full list component code to be safe, but focusing on the style injection.
     const sortedSheep = [...(sheep || [])].sort((a, b) => a.id - b.id);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -79,22 +108,29 @@ export const SheepList = ({ onSelect }) => {
     const filteredSheep = useMemo(() => sortedSheep.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
         const isDead = s.status === 'dead';
-        const isSick = s.status === 'sick';
+        const isPinned = settings?.pinnedSheepIds?.includes(s.id);
+
         if (!matchesSearch) return false;
         if (filterStatus === 'DEAD') return isDead;
         if (filterStatus === 'SICK') return isSick;
         if (filterStatus === 'HEALTHY') return !isDead && !isSick;
+        if (filterStatus === 'PINNED') return isPinned;
         return true;
-    }), [sortedSheep, searchTerm, filterStatus]);
+    }), [sortedSheep, searchTerm, filterStatus, settings?.pinnedSheepIds]);
 
     const counts = useMemo(() => sortedSheep.reduce((acc, s) => {
         const isDead = s.status === 'dead';
         const isSick = s.status === 'sick';
+        const isPinned = settings?.pinnedSheepIds?.includes(s.id);
+
         if (isDead) acc.DEAD++;
         else if (isSick) acc.SICK++;
         else acc.HEALTHY++;
+
+        if (isPinned) acc.PINNED++;
+
         return acc;
-    }, { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, DEAD: 0 }), [sortedSheep]);
+    }, { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, DEAD: 0, PINNED: 0 }), [sortedSheep, settings?.pinnedSheepIds]);
 
     const toggleSelection = (id) => {
         const newSet = new Set(selectedIds);
@@ -286,6 +322,7 @@ export const SheepList = ({ onSelect }) => {
                                 {/* 3. Filters (chip style like SheepListModal) */}
                                 {[
                                     { id: 'ALL', label: '全部' },
+                                    { id: 'PINNED', label: '📌釘選' },
                                     { id: 'HEALTHY', label: '健康' },
                                     { id: 'SICK', label: '生病' },
                                     { id: 'DEAD', label: '離世' }
@@ -354,6 +391,9 @@ export const SheepList = ({ onSelect }) => {
                                     s={s}
                                     isSelectionMode={isSelectionMode}
                                     isSelected={selectedIds.has(s.id)}
+                                    // Pass Favorite Props
+                                    isPinned={settings?.pinnedSheepIds?.includes(s.id)}
+                                    onTogglePin={() => togglePin && togglePin(s.id)}
                                     onSelect={(sheep) => {
                                         if (onSelect) onSelect(sheep);
                                     }}

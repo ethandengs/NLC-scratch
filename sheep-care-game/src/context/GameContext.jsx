@@ -50,10 +50,11 @@ export const GameProvider = ({ children }) => {
     const [settings, setSettings] = useState(() => {
         try {
             const saved = localStorage.getItem('sheep_game_settings');
-            // Default: maxVisibleSheep 15, notify false
-            return saved ? { maxVisibleSheep: 15, notify: false, ...JSON.parse(saved) } : { maxVisibleSheep: 15, notify: false };
+            // Default: maxVisibleSheep 15, notify false, pinnedSheepIds []
+            const defaults = { maxVisibleSheep: 15, notify: false, pinnedSheepIds: [] };
+            return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
         } catch {
-            return { maxVisibleSheep: 15, notify: false };
+            return { maxVisibleSheep: 15, notify: false, pinnedSheepIds: [] };
         }
     });
 
@@ -241,10 +242,6 @@ export const GameProvider = ({ children }) => {
             };
 
             // Parallel execute for faster close handling
-            // Show simple toast if window is visible (not closing)
-            if (document.visibilityState === 'visible') {
-                setMessage("☁️ 儲存中...");
-            }
 
             // Debug: Log the exact data being sent
             console.log("Saving to Cloud:", { userId: lineId, gameData, currentSheep });
@@ -275,9 +272,6 @@ export const GameProvider = ({ children }) => {
             ]);
 
             lastSaveTimeRef.current = Date.now();
-            if (document.visibilityState === 'visible') {
-                setTimeout(() => setMessage(null), 1000);
-            }
         } catch (e) { console.error("Auto-save failed", e); }
     };
 
@@ -398,21 +392,55 @@ export const GameProvider = ({ children }) => {
     // If we restore here, we might get stale data that conflicts or duplicates with Cloud data later.
     useEffect(() => {
         // Just clear any lingering session if we want "Fresh on Refresh"
-        // But Line Login might redirect. 
+        // But Line Login might redirect.
         // If we want "Persistence across Refresh", we keep localStorage but rely entirely on Cloud for "Truth".
         // The problem of "Duplication" comes from MERGING. We must NOT merge in handleLoginSuccess.
     }, []);
 
-    const toggleNotification = async () => {
+    // User Settings State (Persisted in LocalStorage - Device Preference)
+    // User Settings State (Persisted in LocalStorage - Device Preference)
+    // Removed duplicate declaration here. The valid one is further down.
+    // Wait, the one further down was inserted by me. The one at top SHOULD be the valid one.
+    // The previous replacement inserted the NEW code at line 397+ (inside useEffect area?)
+    // Ah, I see I replaced `toggleNotification` which was lower down, but `settings` was defined at top.
+    // I accidentally pasted a SECOND `useState` for settings lower down. I should have just modified the top one.
+    // Correct Fix: Remove the duplicate lower down and update the top one properly.
+    // Actually, looking at the previous diff 194, I replaced `toggleNotification` with a block that INCLUDED `const [settings, setSettings]`.
+    // Since `settings` was ALREADY defined at line 49.
+    // So I have two definitions now.
+    // I need to remove the one I inserted at line ~400 and ensure the top one is correct.
+    // The top one WAS updated in Step 153 to act correctly.
+    // So I just need to remove the duplicate `settings` and `updateSetting` I added in Step 194.
+
+    const toggleNotification = () => {
         const newState = !settings.notify;
         updateSetting('notify', newState);
         showMessage(newState ? "🔔 牧羊提醒已開啟" : "🔕 牧羊提醒已關閉");
+    };
 
-        // Immediate Save will be handled by settings update propagation? 
-        // No, updateSetting is local. We should trigger a save.
-        // We can pass the NEW settings explicitly to saveToCloud to be sure.
-        const newSettings = { ...settings, notify: newState };
-        saveToCloud({ settings: newSettings }); // saveToCloud needs to support 'settings' override key if we use it
+    const togglePin = (sheepId) => {
+        setSettings(prev => {
+            const currentPinned = prev.pinnedSheepIds || [];
+            let nextPinned;
+            if (currentPinned.includes(sheepId)) {
+                nextPinned = currentPinned.filter(id => id !== sheepId);
+            } else {
+                nextPinned = [...currentPinned, sheepId];
+            }
+            const newSettings = { ...prev, pinnedSheepIds: nextPinned };
+
+            // Trigger save
+            localStorage.setItem('sheep_game_settings', JSON.stringify(newSettings));
+            // Trigger Cloud Save (Debounced is fine)
+            // Ideally we should use saveToCloud here too for consistency if possible,
+            // but for now local invalidation + next sync is okay, or just force it.
+            // Let's use saveToCloud({ settings: newSettings }) pattern if supported?
+            // Actually saveToCloud args usage is a bit mixed, let's Stick to setSettings + explicit logic or just trust next save.
+            // But user wants persistence.
+            // Let's just do:
+            saveToCloud({ settings: newSettings });
+            return newSettings;
+        });
     };
 
     // --- LIFF & Login Logic ---
@@ -800,7 +828,7 @@ export const GameProvider = ({ children }) => {
             isLoading, // Exposed for App.jsx loading screen
             sheep, skins, inventory, message, weather, // skins exposed
             location, updateUserLocation, isInClient, // Exposed
-            adoptSheep, updateSheep, updateMultipleSheep, createSkin, toggleSkinPublic, // createSkin exposed
+            adoptSheep, updateSheep, updateMultipleSheep, createSkin, toggleSkinPublic, togglePin, // createSkin exposed
             loginWithLine, loginAsAdmin, logout, // Exposed
             prayForSheep, deleteSheep, deleteMultipleSheep,
             saveToCloud, forceLoadFromCloud, // Exposed
