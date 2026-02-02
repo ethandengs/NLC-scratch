@@ -322,7 +322,7 @@ export const SheepList = ({ onSelect }) => {
                                 {/* 3. Filters (chip style like SheepListModal) */}
                                 {[
                                     { id: 'ALL', label: '全部' },
-                                    { id: 'PINNED', label: '📌 定選' },
+                                    { id: 'PINNED', label: '📌釘選' },
                                     { id: 'HEALTHY', label: '健康' },
                                     { id: 'SICK', label: '生病' },
                                     { id: 'DEAD', label: '離世' }
