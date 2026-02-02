@@ -84,7 +84,7 @@ export const Login = () => {
                                     {isLocal ? 'Test Login' : 'Login 登入'}
                                 </button>
 
-                                {!isInClient && (
+                                {isLocal && (
                                     <div style={{ marginTop: '30px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
                                         <button
                                             onClick={() => setShowAdminLogin(true)}
@@ -105,7 +105,7 @@ export const Login = () => {
                                         value={adminUser}
                                         onChange={(e) => setAdminUser(e.target.value)}
                                         style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-subtle)', boxSizing: 'border-box', background: 'white' }}
-                                        placeholder="預設: admin"
+                                        placeholder="請輸入管理員密碼"
                                     />
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
