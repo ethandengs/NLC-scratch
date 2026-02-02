@@ -177,18 +177,22 @@ export const GameProvider = ({ children }) => {
         showMessage(`設定羊群中... (Hi, ${displayName})`);
 
         try {
-            // New GameState Logic
+            // New GameState Logic - pass LINE profile for persistence
             await loadSkins(userId);
-            const data = await gameState.loadGame(userId);
+            const data = await gameState.loadGame(userId, { displayName, pictureUrl });
 
             if (data && data.user) {
                 // Apply loaded data
                 const { user, sheep: loadedSheep } = data;
 
                 setSheep(loadedSheep);
-                setNickname(user.nickname); // or display_name? DB column 'nickname' exists? V2 migration said yes.
+                // Use nickname from DB; fallback to name or LINE displayName
+                const effectiveNickname = user.nickname?.trim() || user.name?.trim() || displayName;
+                setNickname(effectiveNickname);
 
-                // Load Game Data (Inventory, Settings)
+                // Restore avatar from DB if available (persists across sessions)
+                setUserAvatarUrl(user.avatar?.trim() || (pictureUrl && String(pictureUrl).trim() ? pictureUrl : null));
+
                 // Load Game Data (Inventory, Settings)
                 const gameData = user.game_data || {};
                 setInventory(gameData.inventory || []);
@@ -198,7 +202,7 @@ export const GameProvider = ({ children }) => {
                 }
 
                 setIsDataLoaded(true);
-                showMessage(`歡迎回來，${user.nickname || displayName}! 👋`);
+                showMessage(`歡迎回來，${effectiveNickname}! 👋`);
             } else {
                 // Should not happen as loadGame creates user
                 showMessage("設定完成！");
@@ -267,7 +271,9 @@ export const GameProvider = ({ children }) => {
                 gameState.saveUserProfile(lineId, {
                     game_data: gameData,
                     nickname: currentNickname,
-                    last_login: getLocalISOString()
+                    last_login: getLocalISOString(),
+                    name: currentUser && String(currentUser).trim() ? currentUser : undefined,
+                    avatar: userAvatarUrl && String(userAvatarUrl).trim() ? userAvatarUrl : undefined
                 })
             ]);
 
@@ -584,11 +590,11 @@ export const GameProvider = ({ children }) => {
     // Helper Effect to keep Refs updated for AutoSave (Prevents Stale Closure in Interval)
     const stateRef = React.useRef({ sheep, inventory, settings });
 
-    // Ref Sync: Keep Ref up to date for saveToCloud (async access)
+    // Ref Sync: Keep Ref up to date for saveToCloud and handleUnload (async access)
     useEffect(() => {
-        stateRef.current = { sheep, inventory, settings };
+        stateRef.current = { sheep, inventory, settings, nickname, currentUser, userAvatarUrl };
         lastSaveTimeRef.current = Date.now(); // Optional: track local changes? No, unsafe.
-    }, [sheep, inventory, settings]);
+    }, [sheep, inventory, settings, nickname, currentUser, userAvatarUrl]);
 
     useEffect(() => {
         // Setup only
@@ -601,13 +607,17 @@ export const GameProvider = ({ children }) => {
         const handleUnload = () => {
             // Reliable Save on Close using KeepAlive Fetch
             const currentSheep = stateRef.current.sheep;
+            const profileRef = stateRef.current;
             const currentProfile = {
                 game_data: {
-                    inventory: stateRef.current.inventory,
-                    settings: stateRef.current.settings,
+                    inventory: profileRef.inventory,
+                    settings: profileRef.settings,
                     lastSave: Date.now()
                 },
-                last_login: new Date().toISOString()
+                last_login: new Date().toISOString(),
+                nickname: profileRef.nickname,
+                name: profileRef.currentUser && String(profileRef.currentUser).trim() ? profileRef.currentUser : undefined,
+                avatar: profileRef.userAvatarUrl && String(profileRef.userAvatarUrl).trim() ? profileRef.userAvatarUrl : undefined
             };
 
             // Using KeepAlive fetch for reliable save

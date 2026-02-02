@@ -19,9 +19,12 @@ export const gameState = {
     },
 
     // Load all data (User + Sheep) and apply offline logic
-    // Now accepts userId (LINE ID string) directly
-    async loadGame(userId) {
+    // Accepts userId (LINE ID string) and optional lineProfile { displayName, pictureUrl }
+    async loadGame(userId, lineProfile = {}) {
         if (!userId) return null;
+
+        const { displayName, pictureUrl } = lineProfile;
+        const defaultNickname = (displayName && String(displayName).trim()) || 'Shepherd';
 
         // 1. Get User Profile (Using 'line_id' from user schema)
         let { data: profile, error: fetchError } = await supabase
@@ -37,20 +40,45 @@ export const gameState = {
         }
 
         if (!profile) {
-            // Create profile if missing (Only if confirmed not found)
-            // Create profile if missing
+            // Create profile if missing - use LINE displayName as default nickname
+            // Leverage existing columns: line_id, nickname, name/display_name, avatar, coins
+            const insertPayload = {
+                line_id: userId,
+                nickname: defaultNickname,
+                name: displayName && String(displayName).trim() ? displayName : null,
+                avatar: pictureUrl && String(pictureUrl).trim() ? pictureUrl : null,
+                coins: 0
+            };
             const { data: newProfile, error } = await supabase
                 .from('users')
-                .insert([{ line_id: userId, nickname: 'Shepherd', coins: 0 }])
+                .insert([insertPayload])
                 .select()
                 .single();
 
             if (error) {
                 console.error('Error creating profile:', error);
-                // Return fallback structure
-                return { user: { line_id: userId, nickname: 'Shepherd', coins: 0 }, sheep: [] };
+                return { user: { line_id: userId, nickname: defaultNickname, name: displayName, avatar: pictureUrl }, sheep: [] };
             }
             profile = newProfile;
+        } else {
+            // Returning user: optionally update name/nickname/avatar if stale (null in DB but we have from LINE)
+            const updates = {};
+            if ((!profile.name || !profile.name.trim()) && displayName && String(displayName).trim()) {
+                updates.name = displayName;
+            }
+            if ((!profile.avatar || !profile.avatar.trim()) && pictureUrl && String(pictureUrl).trim()) {
+                updates.avatar = pictureUrl;
+            }
+            if ((!profile.nickname || !profile.nickname.trim()) && defaultNickname !== 'Shepherd') {
+                updates.nickname = defaultNickname;
+            }
+            if (Object.keys(updates).length > 0) {
+                await supabase
+                    .from('users')
+                    .update(updates)
+                    .eq('line_id', userId);
+                profile = { ...profile, ...updates };
+            }
         }
 
         // 2. Get Sheep (Using 'user_id' text)
