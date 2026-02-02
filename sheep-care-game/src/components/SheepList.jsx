@@ -33,10 +33,11 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                 }}>
                     <span style={{ fontSize: '1.2em' }}>♥</span> <span>{Math.ceil(s.health || 0)}%</span>
                 </div>
-                {/* Status Badge: No wrap, dynamic size */}
+                {/* Status Badge: No wrap, dynamic size, Using Design Tokens */}
                 <div style={{
-                    background: isDead ? '#9E9E9E' : (isSick ? '#FF5252' : 'var(--color-badge-orange)'),
-                    color: 'white', padding: '2px 4px', borderRadius: 'var(--radius-tag)', // Reduced padding
+                    background: isDead ? 'var(--palette-disabled)' : (isSick ? 'var(--palette-danger)' : (s.name.length > 3 ? 'var(--tag-seeker-bg)' : 'var(--tag-new-bg)')),
+                    color: isDead ? 'white' : (isSick ? 'white' : (s.name.length > 3 ? 'var(--tag-seeker-text)' : 'var(--tag-new-text)')),
+                    padding: '2px 6px', borderRadius: 'var(--radius-tag)', // Reduced padding
                     fontSize: 'clamp(0.55rem, 2.5vw, 0.65rem)', fontWeight: 'bold',
                     whiteSpace: 'nowrap', // Prevent wrapping
                     flexShrink: 0,
