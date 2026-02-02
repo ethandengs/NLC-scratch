@@ -22,30 +22,30 @@ export const Field = ({ onSelectSheep }) => {
         const updateVisible = () => {
             if (!sheep || sheep.length === 0) return;
             const max = settings?.maxVisibleSheep || 15;
-            const favoriteIds = settings?.favoriteSheepIds || [];
+            const pinnedIds = settings?.pinnedSheepIds || [];
 
             // 1. Separate Favorites and Others (Living + Dead mixed)
             // We want to verify ID existence in current sheep list
             const currentSheepIds = new Set(sheep.map(s => s.id));
-            const activeFavoriteIds = favoriteIds.filter(id => currentSheepIds.has(id));
+            const activePinnedIds = pinnedIds.filter(id => currentSheepIds.has(id));
 
             let finalIds = [];
 
             // 2. Add Favorites (Up to Max)
             // If user favorites more than max, we slice to max (Performance Safety)
             // They should increase Max setting if they want to see more.
-            const favsToTake = activeFavoriteIds.slice(0, max);
-            finalIds = [...favsToTake];
+            const pinnedToTake = activePinnedIds.slice(0, max);
+            finalIds = [...pinnedToTake];
 
             // 3. Fill Remaining Slots
             const slotsRemaining = max - finalIds.length;
             if (slotsRemaining > 0) {
-                // Get all unfavorited sheep
-                const unfavoritedSheep = sheep.filter(s => !finalIds.includes(s.id));
+                // Get all unpinned sheep
+                const unpinnedSheep = sheep.filter(s => !finalIds.includes(s.id));
 
-                if (unfavoritedSheep.length > 0) {
+                if (unpinnedSheep.length > 0) {
                     // Shuffle and Pick
-                    const shuffled = [...unfavoritedSheep].sort(() => 0.5 - Math.random());
+                    const shuffled = [...unpinnedSheep].sort(() => 0.5 - Math.random());
                     const selected = shuffled.slice(0, slotsRemaining);
                     finalIds = [...finalIds, ...selected.map(s => s.id)];
                 }
@@ -57,7 +57,7 @@ export const Field = ({ onSelectSheep }) => {
         updateVisible();
         const interval = setInterval(updateVisible, 60000); // 60s Rotation
         return () => clearInterval(interval);
-    }, [settings?.maxVisibleSheep, settings?.favoriteSheepIds, sheep.length]); // Re-run if count changes
+    }, [settings?.maxVisibleSheep, settings?.pinnedSheepIds, sheep.length]); // Re-run if count changes
 
     // Derived Lists for Rendering
     const visibleLiving = useMemo(() => {

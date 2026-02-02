@@ -418,16 +418,16 @@ export const GameProvider = ({ children }) => {
         showMessage(newState ? "🔔 牧羊提醒已開啟" : "🔕 牧羊提醒已關閉");
     };
 
-    const toggleFavorite = (sheepId) => {
+    const togglePin = (sheepId) => {
         setSettings(prev => {
-            const currentFavorites = prev.favoriteSheepIds || [];
-            let nextFavorites;
-            if (currentFavorites.includes(sheepId)) {
-                nextFavorites = currentFavorites.filter(id => id !== sheepId);
+            const currentPinned = prev.pinnedSheepIds || [];
+            let nextPinned;
+            if (currentPinned.includes(sheepId)) {
+                nextPinned = currentPinned.filter(id => id !== sheepId);
             } else {
-                nextFavorites = [...currentFavorites, sheepId];
+                nextPinned = [...currentPinned, sheepId];
             }
-            const newSettings = { ...prev, favoriteSheepIds: nextFavorites };
+            const newSettings = { ...prev, pinnedSheepIds: nextPinned };
 
             // Trigger save
             localStorage.setItem('sheep_game_settings', JSON.stringify(newSettings));
@@ -828,7 +828,7 @@ export const GameProvider = ({ children }) => {
             isLoading, // Exposed for App.jsx loading screen
             sheep, skins, inventory, message, weather, // skins exposed
             location, updateUserLocation, isInClient, // Exposed
-            adoptSheep, updateSheep, updateMultipleSheep, createSkin, toggleSkinPublic, toggleFavorite, // createSkin exposed
+            adoptSheep, updateSheep, updateMultipleSheep, createSkin, toggleSkinPublic, togglePin, // createSkin exposed
             loginWithLine, loginAsAdmin, logout, // Exposed
             prayForSheep, deleteSheep, deleteMultipleSheep,
             saveToCloud, forceLoadFromCloud, // Exposed

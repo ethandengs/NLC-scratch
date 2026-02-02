@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 
 export const Guide = ({ onClose }) => {
-    const [activeTab, setActiveTab] = useState('MANUAL'); // 'MANUAL' (Secret) | 'SYSTEM' (System)
+    const [activeTab, setActiveTab] = useState('SYSTEM'); // 'MANUAL' (Secret) | 'SYSTEM' (System)
     return (
         <div className="debug-editor-overlay" onClick={onClose}>
             <div className="simple-editor" style={{ width: '400px', textAlign: 'left' }}>
