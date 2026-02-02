@@ -24,9 +24,6 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
 
     // Tab State: 'BASIC' | 'PLAN'
     const [activeTab, setActiveTab] = useState('BASIC');
-
-    // Edit Mode State
-    const [isEditing, setIsEditing] = useState(false);
     const [localMsg, setLocalMsg] = useState('');
 
     useEffect(() => {
@@ -44,46 +41,11 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
             setPlanLocation(plan.location || '');
             setPlanContent(plan.content || '');
 
-            setIsEditing(false); // Default to read-only
             setLocalMsg('');
         }
     }, [target?.id, activeTab]); // Re-run if ID changes. ActiveTab change shouldn't reset, but keeping data synced is good.
 
     if (!target) return null;
-
-    const handleSave = () => {
-        const finalMaturity = sLevel;
-        const planData = {
-            time: planTime,
-            location: planLocation,
-            content: planContent
-        };
-        updateSheep(target.id, {
-            name,
-            note,
-            spiritualMaturity: finalMaturity,
-            plan: planData // Will be merged into Spiritual_Journey_Planning by service
-        });
-        setIsEditing(false); // Exit edit mode
-    };
-
-    const handleCancel = () => {
-        // Reset to original target data
-        setName(target.name);
-        setNote(target.note || '');
-        const { level, stage } = parseMaturity(target.spiritualMaturity);
-        setSLevel(level);
-        setSStage(stage);
-
-        // Reset Plan
-        const plan = target.plan || {};
-        setPlanTime(plan.time || '');
-        setPlanLocation(plan.location || '');
-        setPlanContent(plan.content || '');
-
-        setIsEditing(false);
-        setLocalMsg('');
-    };
 
     const handlePray = () => {
         const todayStr = new Date().toDateString();
@@ -140,9 +102,22 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
         planContent !== (target.plan?.content || '')
     );
 
+    // Content: Basic
+    const handleBasicAutoSave = (field, value) => {
+        const payload = { [field]: value };
+        // If updating maturity, we need partial merge logic if needed, but here simple value is fine or handled by service
+        // Actually for Maturity 'sLevel', we update 'spiritualMaturity'
+        if (field === 'sLevel') {
+            payload.spiritualMaturity = value; // Simple level for now, or maintain existing stage logic?
+            // The original handleSave used just sLevel.
+            delete payload.sLevel;
+        }
+        updateSheep(target.id, payload);
+    };
+
     return (
         <div className="debug-editor-overlay" onClick={onClose}>
-            <div className="debug-editor simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="debug-editor simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
                 <div className="editor-header">
                     <h3>{isDead ? '🪦 墓碑' : '📝 小羊資料'}</h3>
                     <button className="close-btn" onClick={onClose}>✖</button>
@@ -187,16 +162,15 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                     {/* Content: Basic */}
                     {activeTab === 'BASIC' && (
                         <>
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }} title={!isEditing ? "點擊編輯" : ""}>
+                            <div className="form-group">
                                 <label>{isDead ? '墓誌銘 (姓名)' : '姓名'}</label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
+                                    onBlur={() => handleBasicAutoSave('name', name)}
                                     maxLength={10}
                                     placeholder="名字..."
-                                    disabled={!isEditing}
-                                    style={{ pointerEvents: !isEditing ? 'none' : 'auto' }}
                                 />
                             </div>
 
@@ -217,13 +191,15 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                 </div>
                             </div>
 
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }} title={!isEditing ? "點擊編輯" : ""}>
+                            <div className="form-group">
                                 <label>靈程 (Spiritual Maturity)</label>
                                 <select
                                     value={sLevel}
-                                    onChange={(e) => setSLevel(e.target.value)}
-                                    disabled={!isEditing}
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', marginBottom: '5px', pointerEvents: !isEditing ? 'none' : 'auto' }}
+                                    onChange={(e) => {
+                                        setSLevel(e.target.value);
+                                        handleBasicAutoSave('sLevel', e.target.value);
+                                    }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', marginBottom: '5px' }}
                                 >
                                     <option value="">-- 請選擇 --</option>
                                     <option value="新朋友">新朋友</option>
@@ -269,128 +245,90 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                 )}
                             </div>
 
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }} title={!isEditing ? "點擊編輯" : ""}>
+                            <div className="form-group">
                                 <label>備註 / 追憶</label>
                                 <textarea
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
+                                    onBlur={() => handleBasicAutoSave('note', note)}
                                     rows={3}
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd', pointerEvents: !isEditing ? 'none' : 'auto' }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
                                     placeholder={isDead ? "寫下對牠的負擔..." : "記錄這隻小羊的狀況..."}
-                                    disabled={!isEditing}
                                 />
+                            </div>
+
+                            <button
+                                className="pray-action-btn"
+                                onClick={handlePray}
+                                disabled={!isDead && isFull && !isAdmin}
+                                style={{
+                                    opacity: (!isDead && isFull && !isAdmin) ? 0.6 : 1,
+                                    cursor: (!isDead && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
+                                    background: isDead ? '#9c27b0' : undefined // Purple for magic,
+                                }}
+                            >
+                                {buttonText}
+                            </button>
+
+                            {localMsg && (
+                                <div style={{
+                                    marginTop: '10px',
+                                    color: '#e65100',
+                                    fontSize: '0.9rem',
+                                    textAlign: 'center',
+                                    background: '#fff3e0',
+                                    padding: '8px',
+                                    borderRadius: '5px'
+                                }}>
+                                    {localMsg}
+                                </div>
+                            )}
+
+                            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#999', marginTop: '10px' }}>
+                                (內容將自動儲存)
                             </div>
                         </>
                     )}
 
-                    {/* Content: Spiritual Plan */}
+                    {/* Content: Spiritual Plan (Auto-Save, No Buttons) */}
                     {activeTab === 'PLAN' && (
                         <div className="spiritual-plan-form">
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }}>
+                            <div className="form-group">
                                 <label>📅 時間</label>
                                 <input
                                     type="text"
                                     value={planTime}
                                     onChange={(e) => setPlanTime(e.target.value)}
+                                    onBlur={() => updateSheep(target.id, { plan: { time: planTime, location: planLocation, content: planContent } })}
                                     placeholder="例如：週日早上 10:00"
-                                    disabled={!isEditing}
-                                    style={{ pointerEvents: !isEditing ? 'none' : 'auto' }}
                                 />
                             </div>
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }}>
+                            <div className="form-group">
                                 <label>📍 地點</label>
                                 <input
                                     type="text"
                                     value={planLocation}
                                     onChange={(e) => setPlanLocation(e.target.value)}
+                                    onBlur={() => updateSheep(target.id, { plan: { time: planTime, location: planLocation, content: planContent } })}
                                     placeholder="例如：教會小組室"
-                                    disabled={!isEditing}
-                                    style={{ pointerEvents: !isEditing ? 'none' : 'auto' }}
                                 />
                             </div>
-                            <div className="form-group" onClick={() => !isEditing && setIsEditing(true)} style={{ cursor: !isEditing ? 'pointer' : 'default' }}>
+                            <div className="form-group">
                                 <label>📝 內容規劃</label>
                                 <textarea
                                     value={planContent}
                                     onChange={(e) => setPlanContent(e.target.value)}
+                                    onBlur={() => updateSheep(target.id, { plan: { time: planTime, location: planLocation, content: planContent } })}
                                     rows={5}
                                     placeholder="例如：讀經分享、生活關懷..."
-                                    disabled={!isEditing}
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd', pointerEvents: !isEditing ? 'none' : 'auto' }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
                                 />
                             </div>
-                        </div>
-                    )}
-
-                    <button
-                        className="pray-action-btn"
-                        onClick={handlePray}
-                        disabled={!isDead && isFull && !isAdmin}
-                        style={{
-                            opacity: (!isDead && isFull && !isAdmin) ? 0.6 : 1,
-                            cursor: (!isDead && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
-                            background: isDead ? '#9c27b0' : undefined // Purple for magic
-                        }}
-                    >
-                        {buttonText}
-                    </button>
-
-                    {localMsg && (
-                        <div style={{
-                            marginTop: '10px',
-                            color: '#e65100',
-                            fontSize: '0.9rem',
-                            textAlign: 'center',
-                            background: '#fff3e0',
-                            padding: '8px',
-                            borderRadius: '5px'
-                        }}>
-                            {localMsg}
-                        </div>
-                    )}
-
-                    <hr style={{ margin: '15px 0', border: '0', borderTop: '1px solid #eee' }} />
-
-                    {/* Main Actions - Save/Cancel Only */}
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {isEditing && (
-                            <>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={!hasChanges}
-                                    style={{
-                                        flex: 1, height: '36px', padding: '0 5px',
-                                        background: hasChanges ? '#4caf50' : '#ccc',
-                                        color: 'white', border: 'none', borderRadius: '8px',
-                                        cursor: hasChanges ? 'pointer' : 'not-allowed',
-                                        whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
-                                    }}
-                                >
-                                    儲存
-                                </button>
-                                <button
-                                    onClick={handleCancel}
-                                    style={{
-                                        flex: 1, height: '36px', padding: '0 5px',
-                                        background: '#29b6f6',
-                                        color: 'white', border: 'none', borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
-                                    }}
-                                >
-                                    取消
-                                </button>
-                            </>
-                        )}
-                        {!isEditing && (
-                            <div style={{
-                                width: '100%', textAlign: 'center',
-                                fontSize: '0.8rem', color: '#999', padding: '10px'
-                            }}>
-                                (若需刪除或重置，請使用列表的「選取」功能)
+                            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#999', marginTop: '10px' }}>
+                                (內容將自動儲存)
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
