@@ -30,7 +30,8 @@ export const SettingsModal = ({ onClose }) => {
                 </div>
 
                 <div className="modal-form">
-                    <div className="form-group">
+                    <div className="modal-scroll">
+                        <div className="form-group">
                         <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>畫面顯示小羊數量</span>
                             <span style={{ color: 'var(--palette-blue-action)' }}>{settings.maxVisibleSheep} 隻</span>
@@ -53,13 +54,12 @@ export const SettingsModal = ({ onClose }) => {
                         <p className="modal-info-box" style={{ marginTop: '10px' }}>
                             💡 當小羊總數超過此設定時，系統會每分鐘<b>隨機輪播</b>，讓不同的小羊輪流出來透氣，同時保持畫面流暢不卡頓。
                         </p>
+                        </div>
+
+                        <button className="modal-btn-primary" onClick={onClose}>
+                            確定
+                        </button>
                     </div>
-
-
-
-                    <button className="modal-btn-primary" onClick={onClose}>
-                        確定
-                    </button>
                 </div>
             </div>
         </div>

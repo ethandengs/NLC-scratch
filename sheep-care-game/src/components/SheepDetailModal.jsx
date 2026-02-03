@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Plus, ChevronRight, Calendar } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { calculateSheepState, parseMaturity, isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { supabase } from '../services/supabaseClient';
@@ -23,6 +23,7 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
     const [editingPlanId, setEditingPlanId] = useState(null);
     const [tempPlan, setTempPlan] = useState({ name: '', time: '', location: '', content: '' });
     const [reminderOffset, setReminderOffset] = useState(0); // 0 = On time, 15 = 15m before, -1 = No reminder
+    const [planActionLoading, setPlanActionLoading] = useState(false);
 
     // Tab State: 'BASIC' | 'PLAN'
     const [activeTab, setActiveTab] = useState('BASIC');
@@ -113,7 +114,12 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
             alert('請輸入規劃行動');
             return;
         }
+        if (!lineId) {
+            alert('請先登入');
+            return;
+        }
 
+        setPlanActionLoading(true);
         // Calculate notify_at
         let notifyAt = null;
         let scheduledTime = null;
@@ -151,24 +157,38 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
             }
             await fetchPlans();
             setViewMode('LIST');
+            setEditingPlanId(null);
         } catch (error) {
             alert('儲存失敗: ' + error.message);
+        } finally {
+            setPlanActionLoading(false);
         }
     };
 
     const handleDeletePlan = async (id) => {
-        if (window.confirm('確定要刪除此規劃嗎？')) {
-            try {
-                const { error } = await supabase
-                    .from('spiritual_plans')
-                    .delete()
-                    .eq('id', id);
-                if (error) throw error;
-                await fetchPlans();
-            } catch (error) {
-                alert('刪除失敗');
-            }
+        if (!window.confirm('確定要刪除此規劃嗎？')) return;
+
+        setPlanActionLoading(true);
+        try {
+            const { error } = await supabase
+                .from('spiritual_plans')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            await fetchPlans();
+            setViewMode('LIST');
+            setEditingPlanId(null);
+        } catch (error) {
+            alert('刪除失敗: ' + (error?.message || ''));
+        } finally {
+            setPlanActionLoading(false);
         }
+    };
+
+    const handleCancelPlan = () => {
+        setViewMode('LIST');
+        setEditingPlanId(null);
+        setTempPlan({ name: '', time: '', location: '', content: '' });
     };
 
     const openEditPlan = (plan) => {
@@ -221,7 +241,7 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                     <button ref={closeBtnRef} className="close-btn" onClick={onClose} aria-label="關閉">✖</button>
                 </div>
 
-                <div className="modal-form">
+                <div className="modal-form sheep-detail-modal-form">
                     <div className="modal-tabs">
                         <button
                             className={`modal-tab ${activeTab === 'BASIC' ? 'modal-tab-active' : ''}`}
@@ -238,9 +258,10 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                         </button>
                     </div>
 
-                    {activeTab === 'BASIC' && (
-                        <>
-                            <div className="form-group">
+                    <div className="sheep-detail-scroll">
+                        {activeTab === 'BASIC' && (
+                            <div className="sheep-detail-basic">
+                                <div className="form-group">
                                 <label>{isSleepingState ? '沉睡紀錄 (姓名)' : '姓名'}</label>
                                 <input
                                     type="text"
@@ -250,9 +271,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                     maxLength={10}
                                     placeholder="名字..."
                                 />
-                            </div>
+                                </div>
 
-                            <div className="form-group">
+                                <div className="form-group">
                                 <label>狀態</label>
                                 <div className="modal-status-box" style={{ color: isSleepingState ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'var(--palette-danger)')) }}>
                                     <div>
@@ -261,9 +282,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                         {!isSleepingState && <span style={{ marginLeft: '10px', color: '#ff9800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Heart size={14} strokeWidth={2} fill="currentColor" /> 關愛: {target.careLevel || 0}</span>}
                                     </div>
                                 </div>
-                            </div>
+                                </div>
 
-                            <div className="form-group">
+                                <div className="form-group">
                                 <label>靈程 (Spiritual Maturity)</label>
                                 <select
                                     value={sLevel}
@@ -277,9 +298,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                     <option value="慕道友">慕道友</option>
                                     <option value="基督徒">基督徒</option>
                                 </select>
-                            </div>
+                                </div>
 
-                            <div className="form-group">
+                                <div className="form-group">
                                 <label>負擔狀態 (依照數值)</label>
                                 <div className="modal-info-box">
                                     {target.health < 40 ? '🍂 虛弱' : (target.health >= 80 ? '💪 強壯' : '🐑 正常')}
@@ -310,9 +331,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                         </div>
                                     </div>
                                 )}
-                            </div>
+                                </div>
 
-                            <div className="form-group">
+                                <div className="form-group">
                                 <label>備註 / 追憶</label>
                                 <textarea
                                     value={note}
@@ -321,9 +342,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                     rows={3}
                                     placeholder={isSleepingState ? "寫下對他的負擔..." : "記錄這隻小羊的狀況..."}
                                 />
-                            </div>
+                                </div>
 
-                            <button
+                                <button
                                 className="pray-action-btn"
                                 onClick={handlePray}
                                 disabled={!isSleepingState && isFull && !isAdmin}
@@ -333,175 +354,159 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                 }}
                             >
                                 {buttonText}
-                            </button>
+                                </button>
 
-                            {localMsg && (
-                                <div className="modal-local-msg">
-                                    {localMsg}
+                                {localMsg && (
+                                    <div className="modal-local-msg">
+                                        {localMsg}
+                                    </div>
+                                )}
+
+                                <div className="modal-hint">
+                                    (內容將自動儲存)
                                 </div>
-                            )}
-
-                            <div className="modal-hint">
-                                (內容將自動儲存)
                             </div>
-                        </>
-                    )}
+                        )}
 
-                    {activeTab === 'PLAN' && (
-                        <div className="spiritual-plan-container">
-                            {viewMode === 'LIST' ? (
-                                <>
-                                    <div style={{
-                                        position: 'sticky',
-                                        top: 0,
-                                        zIndex: 10,
-                                        paddingBottom: '10px',
-                                        display: 'flex',
-                                        justifyContent: 'flex-end',
-                                        background: 'linear-gradient(to bottom, var(--card-bg) 80%, rgba(255,255,255,0) 100%)'
-                                    }}>
-                                        <button
-                                            className="modal-btn-primary"
-                                            onClick={openAddPlan}
-                                            style={{
-                                                width: '36px',
-                                                height: '36px',
-                                                borderRadius: '50%',
-                                                padding: 0,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '1.2rem',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                                            }}
-                                        >
-                                            ➕
-                                        </button>
-                                    </div>
-
-                                    <div className="plan-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                                        {plans.length === 0 ? (
-                                            <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                                                目前沒有靈程規劃
-                                            </div>
-                                        ) : (
-                                            plans.map(p => (
-                                                <div
-                                                    key={p.id}
-                                                    className="plan-item"
-                                                    onClick={() => openEditPlan(p)}
-                                                    style={{
-                                                        padding: '12px',
-                                                        background: 'var(--bg-canvas)',
-                                                        border: '1px solid var(--border-subtle)',
-                                                        borderRadius: '12px',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        transition: 'background 0.2s'
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                        <span style={{ fontWeight: 'bold', color: 'var(--text-body)' }}>{p.action}</span>
-                                                        {p.scheduled_time && (
-                                                            <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                                                                {formatDisplayTime(p.scheduled_time)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span style={{ fontSize: '1.2rem', color: '#ccc' }}>›</span>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="spiritual-plan-form">
-                                    <div className="form-group">
-                                        <label>📝 行動</label>
-                                        <input
-                                            type="text"
-                                            value={tempPlan.name}
-                                            onChange={(e) => setTempPlan({ ...tempPlan, name: e.target.value })}
-                                            placeholder="例如：探訪、陪讀..."
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>📅 時間</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={tempPlan.time}
-                                            onChange={(e) => setTempPlan({ ...tempPlan, time: e.target.value })}
-                                            style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '8px' }}
-                                        />
-                                    </div>
-
-                                    {tempPlan.time && (
-                                        <div className="form-group">
-                                            <label>⏰ 提醒設定</label>
-                                            <select
-                                                value={reminderOffset}
-                                                onChange={(e) => setReminderOffset(Number(e.target.value))}
-                                                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '8px' }}
-                                            >
-                                                <option value={-1}>🔕 不提醒</option>
-                                                <option value={0}>⚡ 準時提醒</option>
-                                                <option value={15}>🔔 提前 15 分鐘</option>
-                                                <option value={30}>🔔 提前 30 分鐘</option>
-                                                <option value={60}>🔔 提前 1 小時</option>
-                                                <option value={120}>🔔 提前 2 小時</option>
-                                                <option value={1440}>📅 提前 1 天</option>
-                                            </select>
-                                        </div>
-                                    )}
-
-                                    <div className="form-group">
-                                        <label>📍 地點</label>
-                                        <input
-                                            type="text"
-                                            value={tempPlan.location}
-                                            onChange={(e) => setTempPlan({ ...tempPlan, location: e.target.value })}
-                                            placeholder="例如：教會小組室"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>📋 內容規劃</label>
-                                        <textarea
-                                            value={tempPlan.content}
-                                            onChange={(e) => setTempPlan({ ...tempPlan, content: e.target.value })}
-                                            rows={5}
-                                            placeholder="例如：讀經分享、生活關懷..."
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button
-                                            className="modal-btn-secondary"
-                                            onClick={() => setViewMode('LIST')}
-                                        >
-                                            取消
-                                        </button>
-                                        {editingPlanId && (
+                        {activeTab === 'PLAN' && (
+                            <div className="spiritual-plan-container">
+                                {viewMode === 'LIST' ? (
+                                    <>
+                                        <div className="plan-list-header">
                                             <button
-                                                className="modal-btn-secondary btn-destructive"
-                                                onClick={() => handleDeletePlan(editingPlanId)}
-                                                style={{ flex: '0 0 auto', width: 'auto', padding: '0 16px' }}
+                                                type="button"
+                                                className="plan-add-btn"
+                                                onClick={openAddPlan}
+                                                title="新增靈程規劃"
+                                                aria-label="新增靈程規劃"
                                             >
-                                                刪除
+                                                <Plus size={18} strokeWidth={2.5} />
+                                                <span>新增規劃</span>
                                             </button>
+                                        </div>
+
+                                        <div className="plan-list">
+                                            {plans.length === 0 ? (
+                                                <div className="plan-list-empty">
+                                                    <Calendar size={32} strokeWidth={1.5} />
+                                                    <p>目前沒有靈程規劃</p>
+                                                    <p className="plan-list-empty-hint">點擊上方「新增規劃」開始安排</p>
+                                                </div>
+                                            ) : (
+                                                plans.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        type="button"
+                                                        className="plan-item"
+                                                        onClick={() => openEditPlan(p)}
+                                                    >
+                                                        <div className="plan-item-content">
+                                                            <span className="plan-item-action">{p.action}</span>
+                                                            {p.scheduled_time && (
+                                                                <span className="plan-item-time">
+                                                                    {formatDisplayTime(p.scheduled_time)}
+                                                                </span>
+                                                            )}
+                                                            {p.location?.trim() && (
+                                                                <span className="plan-item-location">{p.location}</span>
+                                                            )}
+                                                        </div>
+                                                        <ChevronRight size={20} strokeWidth={2} className="plan-item-chevron" />
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="spiritual-plan-form">
+                                        <div className="form-group">
+                                            <label>📝 行動</label>
+                                            <input
+                                                type="text"
+                                                value={tempPlan.name}
+                                                onChange={(e) => setTempPlan({ ...tempPlan, name: e.target.value })}
+                                                placeholder="例如：探訪、陪讀..."
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>📅 時間</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={tempPlan.time}
+                                                onChange={(e) => setTempPlan({ ...tempPlan, time: e.target.value })}
+                                            />
+                                        </div>
+
+                                        {tempPlan.time && (
+                                            <div className="form-group">
+                                                <label>⏰ 提醒設定</label>
+                                                <select
+                                                    value={reminderOffset}
+                                                    onChange={(e) => setReminderOffset(Number(e.target.value))}
+                                                >
+                                                    <option value={-1}>🔕 不提醒</option>
+                                                    <option value={0}>⚡ 準時提醒</option>
+                                                    <option value={15}>🔔 提前 15 分鐘</option>
+                                                    <option value={30}>🔔 提前 30 分鐘</option>
+                                                    <option value={60}>🔔 提前 1 小時</option>
+                                                    <option value={120}>🔔 提前 2 小時</option>
+                                                    <option value={1440}>📅 提前 1 天</option>
+                                                </select>
+                                            </div>
                                         )}
-                                        <button
-                                            className="modal-btn-primary"
-                                            onClick={handleSavePlan}
-                                        >
-                                            儲存
-                                        </button>
+
+                                        <div className="form-group">
+                                            <label>📍 地點</label>
+                                            <input
+                                                type="text"
+                                                value={tempPlan.location}
+                                                onChange={(e) => setTempPlan({ ...tempPlan, location: e.target.value })}
+                                                placeholder="例如：教會小組室"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>📋 內容規劃</label>
+                                            <textarea
+                                                value={tempPlan.content}
+                                                onChange={(e) => setTempPlan({ ...tempPlan, content: e.target.value })}
+                                                rows={5}
+                                                placeholder="例如：讀經分享、生活關懷..."
+                                            />
+                                        </div>
+
+                                        <div className="spiritual-plan-form-actions">
+                                            <button
+                                                type="button"
+                                                className="modal-btn-secondary"
+                                                onClick={handleCancelPlan}
+                                                disabled={planActionLoading}
+                                            >
+                                                取消
+                                            </button>
+                                            {editingPlanId && (
+                                                <button
+                                                    type="button"
+                                                    className="modal-btn-secondary btn-destructive"
+                                                    onClick={() => handleDeletePlan(editingPlanId)}
+                                                    disabled={planActionLoading}
+                                                >
+                                                    刪除
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="modal-btn-primary"
+                                                onClick={handleSavePlan}
+                                                disabled={planActionLoading}
+                                            >
+                                                {planActionLoading ? '處理中...' : '儲存'}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

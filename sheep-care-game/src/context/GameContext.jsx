@@ -5,9 +5,28 @@ import { calculateTick, generateVisuals, getSheepMessage, calculateSheepState, c
 import { gameState } from '../services/gameState';
 import { supabase } from '../services/supabaseClient';
 
-const GameContext = createContext();
+const defaultGameContext = {
+    currentUser: null,
+    nickname: null,
+    userAvatarUrl: null,
+    lineId: null,
+    isLoading: true,
+    sheep: [],
+    inventory: [],
+    message: null,
+    weather: { type: 'sunny', isDay: true, temp: 25 },
+    settings: { maxVisibleSheep: 15, notify: false, pinnedSheepIds: [] },
+    notificationEnabled: false,
+    toggleNotification: () => {},
+    isAdmin: false,
+};
 
-export const useGame = () => useContext(GameContext);
+const GameContext = createContext(defaultGameContext);
+
+export const useGame = () => {
+    const ctx = useContext(GameContext);
+    return ctx ?? defaultGameContext;
+};
 
 // Supabase client is managed in services/supabaseClient
 

@@ -31,17 +31,18 @@ export const Guide = ({ onClose }) => {
                         </button>
                     </div>
 
-                    <div
-                        className="modal-content guide-modal-content"
-                        style={{
-                            color: '#000',
-                            padding: activeTab === 'MANUAL' ? '0' : '0 10px'
-                        }}
-                    >
-                        {activeTab === 'MANUAL' ? (
-                            <SevenStepsMap />
-                        ) : (
-                            <>
+                    <div className="modal-scroll">
+                        <div
+                            className="modal-content guide-modal-content"
+                            style={{
+                                color: '#000',
+                                padding: activeTab === 'MANUAL' ? '0' : '0 10px'
+                            }}
+                        >
+                            {activeTab === 'MANUAL' ? (
+                                <SevenStepsMap />
+                            ) : (
+                                <>
                                 <h4>1. 每日照顧與進化</h4>
                                 <p>上帝限制了每日的影響力，讓成長循序漸進：</p>
                                 <ul>
@@ -88,14 +89,16 @@ export const Guide = ({ onClose }) => {
                                 <p style={{ textAlign: 'center', marginTop: '20px', color: '#666' }}>
                                     <em>"信心若沒有行為就是死的。"</em>
                                 </p>
-                            </>
-                        )}
+                                </>
+                            )}
+                        </div>
+
+                        <button className="modal-btn-primary guide-action-btn" onClick={onClose}>
+                            我瞭解了
+                        </button>
                     </div>
 
 
-                    <button className="modal-btn-primary guide-action-btn" onClick={onClose}>
-                        我瞭解了
-                    </button>
                 </div>
             </div>
         </div>

@@ -139,7 +139,7 @@
 /* Hint: tap step for details */
 .map-step-hint {
     position: absolute;
-    bottom: 12px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     margin: 0;
@@ -147,6 +147,10 @@
     color: var(--text-label);
     pointer-events: none;
     z-index: 40;
+}
+
+[data-theme='night'] .map-step-hint {
+    color: var(--palette-cream);
 }
 
 /* Video modal overlay */
