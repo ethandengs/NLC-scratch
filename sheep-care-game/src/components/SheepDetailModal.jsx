@@ -1,10 +1,12 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import { calculateSheepState, parseMaturity } from '../utils/gameLogic';
+import { calculateSheepState, parseMaturity, isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 
 export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
     const { sheep, updateSheep, prayForSheep, deleteSheep, forceLoadFromCloud, isAdmin } = useGame();
+    const modalRef = useRef(null);
+    const closeBtnRef = useRef(null);
 
     const target = (sheep || []).find(s => s.id === selectedSheepId);
     const [name, setName] = useState('');
@@ -45,33 +47,43 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
         }
     }, [target?.id, activeTab]); // Re-run if ID changes. ActiveTab change shouldn't reset, but keeping data synced is good.
 
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    useEffect(() => {
+        closeBtnRef.current?.focus();
+    }, [selectedSheepId]);
+
     if (!target) return null;
 
     const handlePray = () => {
         const todayStr = new Date().toDateString();
-        // Check if Dead and already prayed today
-        if (target.status === 'dead' && target.lastPrayedDate === todayStr && !isAdmin) {
+        // Check if sleeping and already prayed today
+        if (isSleeping(target) && target.lastPrayedDate === todayStr && !isAdmin) {
             setLocalMsg("今天已經為這隻小羊禱告過了，請明天再來！🙏");
             return;
         }
 
         prayForSheep(target.id);
-        // Optional: Set success feedback? Global toast handles it.
-        // But if successful, maybe clear error msg?
         setLocalMsg('');
     };
 
-    const isDead = target.status === 'dead';
+    const isSleepingState = isSleeping(target);
 
-    // Prayer / Resurrection Logic
+    // Prayer / Awakening Logic
     const today = new Date().toDateString();
     const currentCount = (target.lastPrayedDate === today) ? (target.prayedCount || 0) : 0;
-    const isFull = !isDead && currentCount >= 3;
+    const isFull = !isSleepingState && currentCount >= 3;
 
     // Button Text
     let buttonText = '';
-    if (isDead) {
-        buttonText = `🔮 迫切認領禱告 (${target.resurrectionProgress || 0}/5)`;
+    if (isSleepingState) {
+        buttonText = `🔮 喚醒禱告 (${getAwakeningProgress(target)}/5)`;
     } else {
         if (isAdmin) {
             buttonText = `🙏 為牠禱告 (今日: ${currentCount}/∞)`;
@@ -82,7 +94,7 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
 
     // Status Text
     const getStatusText = (status, health) => {
-        if (status === 'dead') return '已安息 🪦';
+        if (isSleeping({ status })) return '已沉睡 🪦';
         if (status === 'sick') return '生病 (需禱告恢復)';
         if (status === 'injured') return '受傷 (需禱告恢復)';
         if (health >= 80) return '強壯 💪';
@@ -116,44 +128,27 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
     };
 
     return (
-        <div className="debug-editor-overlay" onClick={onClose}>
-            <div className="debug-editor simple-editor" onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' }}>
-                <div className="editor-header">
-                    <h3>{isDead ? '🪦 墓碑' : '📝 小羊資料'}</h3>
-                    <button className="close-btn" onClick={onClose}>✖</button>
+        <div className="debug-editor-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="sheep-detail-title">
+            <div className="modal-card" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3 id="sheep-detail-title">{isSleepingState ? '🪦 沉睡紀錄' : '📝 小羊資料'}</h3>
+                    <button ref={closeBtnRef} className="close-btn" onClick={onClose} aria-label="關閉">✖</button>
                 </div>
 
-                <div className="editor-form">
+                <div className="modal-form">
 
                     {/* Tabs */}
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #ddd', paddingBottom: '0' }}>
+                    <div className="modal-tabs">
                         <button
+                            className={`modal-tab ${activeTab === 'BASIC' ? 'modal-tab-active' : ''}`}
                             onClick={() => setActiveTab('BASIC')}
-                            style={{
-                                padding: '8px 16px',
-                                border: 'none',
-                                background: activeTab === 'BASIC' ? 'var(--color-primary-cream)' : 'transparent',
-                                borderBottom: activeTab === 'BASIC' ? '3px solid var(--color-action-blue)' : 'none',
-                                fontWeight: 'bold',
-                                color: activeTab === 'BASIC' ? '#333' : '#999',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
                         >
                             基本資料
                         </button>
                         <button
+                            className={`modal-tab ${activeTab === 'PLAN' ? 'modal-tab-active' : ''}`}
+                            data-tab="plan"
                             onClick={() => setActiveTab('PLAN')}
-                            style={{
-                                padding: '8px 16px',
-                                border: 'none',
-                                background: activeTab === 'PLAN' ? 'var(--color-primary-cream)' : 'transparent',
-                                borderBottom: activeTab === 'PLAN' ? '3px solid var(--color-action-pink)' : 'none',
-                                fontWeight: 'bold',
-                                color: activeTab === 'PLAN' ? '#333' : '#999',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
                         >
                             靈程規劃
                         </button>
@@ -163,7 +158,7 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                     {activeTab === 'BASIC' && (
                         <>
                             <div className="form-group">
-                                <label>{isDead ? '墓誌銘 (姓名)' : '姓名'}</label>
+                                <label>{isSleepingState ? '沉睡紀錄 (姓名)' : '姓名'}</label>
                                 <input
                                     type="text"
                                     value={name}
@@ -176,17 +171,11 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
 
                             <div className="form-group">
                                 <label>狀態</label>
-                                <div style={{
-                                    padding: '8px',
-                                    background: '#f5f5f5',
-                                    borderRadius: '8px',
-                                    display: 'flex', flexDirection: 'column', gap: '5px',
-                                    color: isDead ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'red'))
-                                }}>
+                                <div className="modal-status-box" style={{ color: isSleepingState ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'var(--palette-danger)')) }}>
                                     <div>
                                         {getStatusText(target.status, target.health)}
-                                        {!isDead && <span style={{ marginLeft: '10px' }}>負擔: {Math.ceil(target.health)}%</span>}
-                                        {!isDead && <span style={{ marginLeft: '10px', color: '#ff9800' }}>❤️ 關愛: {target.careLevel || 0}</span>}
+                                        {!isSleepingState && <span style={{ marginLeft: '10px' }}>負擔: {Math.ceil(target.health)}%</span>}
+                                        {!isSleepingState && <span style={{ marginLeft: '10px', color: '#ff9800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Heart size={14} strokeWidth={2} fill="currentColor" /> 關愛: {target.careLevel || 0}</span>}
                                     </div>
                                 </div>
                             </div>
@@ -199,7 +188,6 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                         setSLevel(e.target.value);
                                         handleBasicAutoSave('sLevel', e.target.value);
                                     }}
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', marginBottom: '5px' }}
                                 >
                                     <option value="">-- 請選擇 --</option>
                                     <option value="新朋友">新朋友</option>
@@ -210,13 +198,13 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
 
                             <div className="form-group">
                                 <label>負擔狀態 (依照數值)</label>
-                                <div style={{ padding: '8px', background: '#eee', borderRadius: '8px', color: '#555', fontSize: '0.9rem' }}>
+                                <div className="modal-info-box">
                                     {target.health < 40 ? '🍂 虛弱' : (target.health >= 80 ? '💪 強壯' : '🐑 正常')}
                                 </div>
-                                {isAdmin && !isDead && (
-                                    <div style={{ marginTop: '10px', padding: '10px', background: '#e0f7fa', borderRadius: '8px', border: '1px dashed #00bcd4' }}>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#006064' }}>🔧 管理員調整: {Math.ceil(target.health)}%</label>
-                                        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                {isAdmin && !isSleepingState && (
+                                    <div className="modal-admin-box">
+                                        <label>🔧 管理員調整: {Math.ceil(target.health)}%</label>
+                                        <div className="admin-actions">
                                             <input
                                                 type="range"
                                                 min="1"
@@ -227,16 +215,12 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                                     const { health, status, type } = calculateSheepState(newHealth, target.status);
                                                     updateSheep(target.id, { health, type, status });
                                                 }}
-                                                style={{ flex: 1, cursor: 'pointer' }}
                                             />
                                             <button
                                                 type="button"
+                                                className="admin-reset-btn btn-destructive"
                                                 onClick={() => updateSheep(target.id, { health: 0 })}
-                                                style={{
-                                                    padding: '2px 8px', fontSize: '0.8rem', background: '#ff5252', color: 'white',
-                                                    border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap'
-                                                }}
-                                                title="直接歸零 (測試死亡)"
+                                                title="直接歸零 (測試沉睡)"
                                             >
                                                 💀 歸零
                                             </button>
@@ -252,39 +236,29 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                     onChange={(e) => setNote(e.target.value)}
                                     onBlur={() => handleBasicAutoSave('note', note)}
                                     rows={3}
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
-                                    placeholder={isDead ? "寫下對牠的負擔..." : "記錄這隻小羊的狀況..."}
+                                    placeholder={isSleepingState ? "寫下對牠的負擔..." : "記錄這隻小羊的狀況..."}
                                 />
                             </div>
 
                             <button
                                 className="pray-action-btn"
                                 onClick={handlePray}
-                                disabled={!isDead && isFull && !isAdmin}
+                                disabled={!isSleepingState && isFull && !isAdmin}
                                 style={{
-                                    opacity: (!isDead && isFull && !isAdmin) ? 0.6 : 1,
-                                    cursor: (!isDead && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
-                                    background: isDead ? '#9c27b0' : undefined // Purple for magic,
+                                    opacity: (!isSleepingState && isFull && !isAdmin) ? 0.6 : 1,
+                                    cursor: (!isSleepingState && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
                                 }}
                             >
                                 {buttonText}
                             </button>
 
                             {localMsg && (
-                                <div style={{
-                                    marginTop: '10px',
-                                    color: '#e65100',
-                                    fontSize: '0.9rem',
-                                    textAlign: 'center',
-                                    background: '#fff3e0',
-                                    padding: '8px',
-                                    borderRadius: '5px'
-                                }}>
+                                <div className="modal-local-msg">
                                     {localMsg}
                                 </div>
                             )}
 
-                            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#999', marginTop: '10px' }}>
+                            <div className="modal-hint">
                                 (內容將自動儲存)
                             </div>
                         </>
@@ -321,10 +295,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                     onBlur={() => updateSheep(target.id, { plan: { time: planTime, location: planLocation, content: planContent } })}
                                     rows={5}
                                     placeholder="例如：讀經分享、生活關懷..."
-                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' }}
                                 />
                             </div>
-                            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#999', marginTop: '10px' }}>
+                            <div className="modal-hint">
                                 (內容將自動儲存)
                             </div>
                         </div>
