@@ -188,8 +188,7 @@
 .sheep-card-pray {
   font-size: 0.7rem;
   font-weight: bold;
-  margin-top: 2px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .sheep-card-pray.sheep-card-pray--dead {
