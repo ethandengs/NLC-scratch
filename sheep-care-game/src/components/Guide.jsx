@@ -25,8 +25,8 @@ export const Guide = ({ onClose }) => {
                 className="modal-card"
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    maxWidth: activeTab === 'MANUAL' ? '1000px' : '420px',
-                    width: activeTab === 'MANUAL' ? '95vw' : '90%',
+                    maxWidth: '420px',
+                    width: '90%',
                     transition: 'all 0.3s ease'
                 }}
             >
@@ -52,7 +52,13 @@ export const Guide = ({ onClose }) => {
                         </button>
                     </div>
 
-                    <div className="modal-content" style={{ color: '#000', padding: activeTab === 'MANUAL' ? '0' : '0 10px' }}>
+                    <div className="modal-content" style={{
+                        color: '#000',
+                        padding: activeTab === 'MANUAL' ? '0' : '0 10px',
+                        maxHeight: activeTab === 'MANUAL' ? '80vh' : '60vh',
+                        overflowY: 'auto',
+                        transition: 'max-height 0.3s ease'
+                    }}>
                         {activeTab === 'MANUAL' ? (
                             <div className="map-embed-container" style={{ marginTop: '0' }}>
                                 <SevenStepsMap />
