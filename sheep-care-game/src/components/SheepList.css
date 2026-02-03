@@ -77,6 +77,7 @@
   align-items: center;
   flex-shrink: 0;
   gap: 4px;
+  margin-right: 18px;
 }
 
 .sheep-card-header-actions {
@@ -91,6 +92,12 @@
 .pin-btn:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
 }
 
 .sheep-card-health {
