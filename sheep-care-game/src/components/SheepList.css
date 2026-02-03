@@ -157,11 +157,18 @@
   flex: 1;
   min-height: 24px;
   width: max-content;
+  max-width: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: visible;
   margin: 15% 0% 15% 0%;
+}
+
+@media (max-width: 480px) {
+  .sheep-card-avatar {
+    max-width: 96px;
+  }
 }
 
 .sheep-card-avatar-inner {
@@ -189,7 +196,7 @@
 .sheep-card-pray {
   font-size: 0.7rem;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 25%;
 }
 
 .sheep-card-pray.sheep-card-pray--dead {
