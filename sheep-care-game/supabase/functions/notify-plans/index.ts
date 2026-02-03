@@ -59,7 +59,15 @@ Deno.serve(async (req) => {
 
         for (const plan of plans) {
             // Construct Message
-            const timeString = new Date(plan.scheduled_time).toLocaleTimeString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+            const timeString = new Date(plan.scheduled_time).toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                weekday: 'short'
+            })
 
             // Text different based on offset? 
             // Simple generic message is fine:
