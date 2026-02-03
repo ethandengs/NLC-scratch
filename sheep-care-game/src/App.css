@@ -383,8 +383,83 @@
   padding-bottom: 28px;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Shared scroll container for modal content (under tabs) */
+.modal-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 8px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+/* Sheep detail: structured layout with clear sections */
+.sheep-detail-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+/* Tabs sit above the scrollable area */
+.sheep-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 8px;
+  padding-right: 8px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+/* Ensure scrollable content doesn't clip at right edge */
+.modal-scroll > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.sheep-detail-scroll > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.sheep-detail-basic {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sheep-detail-basic .form-group {
+  margin-bottom: 16px;
+}
+
+.sheep-detail-basic .form-group:last-of-type {
+  margin-bottom: 12px;
+}
+
+.spiritual-plan-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.spiritual-plan-form .form-group {
+  margin-bottom: 14px;
+}
+
+.spiritual-plan-form .form-group:last-of-type {
+  margin-bottom: 16px;
 }
 
 .modal-tabs {
@@ -421,7 +496,7 @@
   text-align: left;
 }
 
-/* Guide modal: single scroll area so action button appears at bottom */
+/* Guide modal: tabs above scroll, button at bottom */
 .guide-modal-form {
   display: flex;
   flex-direction: column;
@@ -454,6 +529,23 @@
   background: var(--btn-primary-hover);
 }
 
+.modal-btn-primary:disabled {
+  background: var(--btn-disabled-bg);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Action buttons inside scrollable areas: keep spacing from content */
+.modal-scroll .modal-btn-primary,
+.modal-scroll .modal-btn-secondary {
+  margin-top: 16px;
+}
+
+.modal-scroll .modal-btn-primary:last-child,
+.modal-scroll .modal-btn-secondary:last-child {
+  margin-bottom: 16px;
+}
+
 .modal-btn-secondary {
   width: 100%;
   padding: 12px;
@@ -470,6 +562,12 @@
 
 .modal-btn-secondary:hover {
   background: #8f7d7d;
+}
+
+.modal-btn-secondary:disabled {
+  background: var(--btn-disabled-bg);
+  cursor: not-allowed;
+  opacity: 0.8;
 }
 
 .modal-btn-secondary-outline {
@@ -512,6 +610,157 @@
 .modal-info-box-blue {
   background: #e3f2fd;
   font-size: 0.85rem;
+}
+
+/* Plan list header + add button */
+.plan-list-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  background: linear-gradient(to bottom, var(--bg-card) 80%, rgba(255, 255, 255, 0) 100%);
+}
+
+.plan-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: none;
+  border-radius: var(--radius-tag);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: var(--shadow-card);
+}
+
+.plan-add-btn:hover {
+  background: var(--btn-primary-hover);
+}
+
+.plan-add-btn:active {
+  transform: scale(0.98);
+}
+
+/* Plan list + plan item */
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-canvas);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-tag);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+  text-align: left;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.plan-item:hover {
+  background: var(--palette-pale-blue-bg);
+  border-color: var(--palette-blue-action);
+  box-shadow: 0 2px 8px rgba(84, 175, 203, 0.15);
+}
+
+.plan-item:active {
+  transform: scale(0.99);
+}
+
+.plan-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.plan-item-action {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-body);
+}
+
+.plan-item-time {
+  font-size: 0.85rem;
+  color: var(--text-label);
+}
+
+.plan-item-location {
+  font-size: 0.8rem;
+  color: var(--text-label);
+  opacity: 0.9;
+}
+
+.plan-item-chevron {
+  flex-shrink: 0;
+  color: var(--border-main);
+  opacity: 0.6;
+}
+
+.plan-item:hover .plan-item-chevron {
+  color: var(--palette-blue-action);
+  opacity: 1;
+}
+
+.plan-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 20px;
+  color: var(--text-label);
+  text-align: center;
+}
+
+.plan-list-empty svg {
+  opacity: 0.4;
+}
+
+.plan-list-empty p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.plan-list-empty-hint {
+  font-size: 0.8rem !important;
+  opacity: 0.8;
+}
+
+/* Spiritual plan form actions */
+.spiritual-plan-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.spiritual-plan-form-actions .modal-btn-primary {
+  flex: 1;
+  min-width: 80px;
+}
+
+.spiritual-plan-form-actions .modal-btn-secondary {
+  flex: 0 1 auto;
+  min-width: 70px;
 }
 
 .modal-hint {
