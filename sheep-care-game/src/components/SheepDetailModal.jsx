@@ -343,7 +343,7 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label>備註 / 追憶</label>
+                                    <label>備註 (狀況需要)</label>
                                     <textarea
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
