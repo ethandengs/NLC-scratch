@@ -393,6 +393,9 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                                                 <span>新增規劃</span>
                                             </button>
                                         </div>
+                                        <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#ff9800', marginBottom: '10px' }}>
+                                            ⚠️ 系統將自動刪除超過一個月的過期行程
+                                        </div>
 
                                         <div className="plan-list">
                                             {plans.length === 0 ? (

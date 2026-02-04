@@ -131,7 +131,20 @@ Deno.serve(async (req) => {
             }
         }
 
-        return new Response(JSON.stringify({ processed: results }), {
+        // 6. Cleanup Old Plans (> 30 days)
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        const { error: deleteError, count } = await supabaseClient
+            .from('spiritual_plans')
+            .delete({ count: 'exact' })
+            .lt('scheduled_time', thirtyDaysAgo)
+
+        if (deleteError) {
+            console.error('[Cleanup] Failed to delete old plans:', deleteError)
+        } else {
+            console.log(`[Cleanup] Deleted ${count} old plans scheduled before ${thirtyDaysAgo}`)
+        }
+
+        return new Response(JSON.stringify({ processed: results, cleanupCount: count }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
