@@ -143,9 +143,18 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
             notify_at: notifyAt,
             reminder_offset: reminderOffset,
             location: tempPlan.location,
-            content: tempPlan.content,
-            is_notified: false
+            content: tempPlan.content
         };
+
+        // Reset notification ONLY if time changed or it's a new plan
+        if (editingPlanId) {
+            const originalPlan = plans.find(p => p.id === editingPlanId);
+            if (originalPlan && originalPlan.notify_at !== notifyAt) {
+                payload.is_notified = false;
+            }
+        } else {
+            payload.is_notified = false;
+        }
 
         try {
             if (editingPlanId) {
@@ -262,98 +271,98 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
                         {activeTab === 'BASIC' && (
                             <div className="sheep-detail-basic">
                                 <div className="form-group">
-                                <label>{isSleepingState ? '沉睡紀錄 (姓名)' : '姓名'}</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    onBlur={() => handleBasicAutoSave('name', name)}
-                                    maxLength={10}
-                                    placeholder="名字..."
-                                />
+                                    <label>{isSleepingState ? '沉睡紀錄 (姓名)' : '姓名'}</label>
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        onBlur={() => handleBasicAutoSave('name', name)}
+                                        maxLength={10}
+                                        placeholder="名字..."
+                                    />
                                 </div>
 
                                 <div className="form-group">
-                                <label>狀態</label>
-                                <div className="modal-status-box" style={{ color: isSleepingState ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'var(--palette-danger)')) }}>
-                                    <div>
-                                        {getStatusText(target.status, target.health)}
-                                        {!isSleepingState && <span style={{ marginLeft: '10px' }}>負擔: {Math.ceil(target.health)}%</span>}
-                                        {!isSleepingState && <span style={{ marginLeft: '10px', color: '#ff9800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Heart size={14} strokeWidth={2} fill="currentColor" /> 關愛: {target.careLevel || 0}</span>}
-                                    </div>
-                                </div>
-                                </div>
-
-                                <div className="form-group">
-                                <label>靈程 (Spiritual Maturity)</label>
-                                <select
-                                    value={sLevel}
-                                    onChange={(e) => {
-                                        setSLevel(e.target.value);
-                                        handleBasicAutoSave('sLevel', e.target.value);
-                                    }}
-                                >
-                                    <option value="">-- 請選擇 --</option>
-                                    <option value="新朋友">新朋友</option>
-                                    <option value="慕道友">慕道友</option>
-                                    <option value="基督徒">基督徒</option>
-                                </select>
-                                </div>
-
-                                <div className="form-group">
-                                <label>負擔狀態 (依照數值)</label>
-                                <div className="modal-info-box">
-                                    {target.health < 40 ? '🍂 虛弱' : (target.health >= 80 ? '💪 強壯' : '🐑 正常')}
-                                </div>
-                                {isAdmin && !isSleepingState && (
-                                    <div className="modal-admin-box">
-                                        <label>🔧 管理員調整: {Math.ceil(target.health)}%</label>
-                                        <div className="admin-actions">
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="100"
-                                                value={target.health}
-                                                onChange={(e) => {
-                                                    const newHealth = Number(e.target.value);
-                                                    const { health, status, type } = calculateSheepState(newHealth, target.status);
-                                                    updateSheep(target.id, { health, type, status });
-                                                }}
-                                            />
-                                            <button
-                                                type="button"
-                                                className="admin-reset-btn btn-destructive"
-                                                onClick={() => updateSheep(target.id, { health: 0 })}
-                                                title="直接歸零 (測試沉睡)"
-                                            >
-                                                💀 歸零
-                                            </button>
+                                    <label>狀態</label>
+                                    <div className="modal-status-box" style={{ color: isSleepingState ? '#666' : (target.health >= 80 ? '#2196f3' : (target.status === 'healthy' ? 'green' : 'var(--palette-danger)')) }}>
+                                        <div>
+                                            {getStatusText(target.status, target.health)}
+                                            {!isSleepingState && <span style={{ marginLeft: '10px' }}>負擔: {Math.ceil(target.health)}%</span>}
+                                            {!isSleepingState && <span style={{ marginLeft: '10px', color: '#ff9800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Heart size={14} strokeWidth={2} fill="currentColor" /> 關愛: {target.careLevel || 0}</span>}
                                         </div>
                                     </div>
-                                )}
                                 </div>
 
                                 <div className="form-group">
-                                <label>備註 / 追憶</label>
-                                <textarea
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                    onBlur={() => handleBasicAutoSave('note', note)}
-                                    rows={3}
-                                    placeholder={isSleepingState ? "寫下對他的負擔..." : "記錄這隻小羊的狀況..."}
-                                />
+                                    <label>靈程 (Spiritual Maturity)</label>
+                                    <select
+                                        value={sLevel}
+                                        onChange={(e) => {
+                                            setSLevel(e.target.value);
+                                            handleBasicAutoSave('sLevel', e.target.value);
+                                        }}
+                                    >
+                                        <option value="">-- 請選擇 --</option>
+                                        <option value="新朋友">新朋友</option>
+                                        <option value="慕道友">慕道友</option>
+                                        <option value="基督徒">基督徒</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>負擔狀態 (依照數值)</label>
+                                    <div className="modal-info-box">
+                                        {target.health < 40 ? '🍂 虛弱' : (target.health >= 80 ? '💪 強壯' : '🐑 正常')}
+                                    </div>
+                                    {isAdmin && !isSleepingState && (
+                                        <div className="modal-admin-box">
+                                            <label>🔧 管理員調整: {Math.ceil(target.health)}%</label>
+                                            <div className="admin-actions">
+                                                <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="100"
+                                                    value={target.health}
+                                                    onChange={(e) => {
+                                                        const newHealth = Number(e.target.value);
+                                                        const { health, status, type } = calculateSheepState(newHealth, target.status);
+                                                        updateSheep(target.id, { health, type, status });
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="admin-reset-btn btn-destructive"
+                                                    onClick={() => updateSheep(target.id, { health: 0 })}
+                                                    title="直接歸零 (測試沉睡)"
+                                                >
+                                                    💀 歸零
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="form-group">
+                                    <label>備註 / 追憶</label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        onBlur={() => handleBasicAutoSave('note', note)}
+                                        rows={3}
+                                        placeholder={isSleepingState ? "寫下對他的負擔..." : "記錄這隻小羊的狀況..."}
+                                    />
                                 </div>
 
                                 <button
-                                className="pray-action-btn"
-                                onClick={handlePray}
-                                disabled={!isSleepingState && isFull && !isAdmin}
-                                style={{
-                                    opacity: (!isSleepingState && isFull && !isAdmin) ? 0.6 : 1,
-                                    cursor: (!isSleepingState && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
-                                }}
-                            >
-                                {buttonText}
+                                    className="pray-action-btn"
+                                    onClick={handlePray}
+                                    disabled={!isSleepingState && isFull && !isAdmin}
+                                    style={{
+                                        opacity: (!isSleepingState && isFull && !isAdmin) ? 0.6 : 1,
+                                        cursor: (!isSleepingState && isFull && !isAdmin) ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
+                                    {buttonText}
                                 </button>
 
                                 {localMsg && (
