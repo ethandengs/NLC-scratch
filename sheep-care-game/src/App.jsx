@@ -80,17 +80,25 @@ function App() {
 
         <div className={`hud-right-actions ${isHudMenuOpen ? 'hud-right-actions--open' : ''}`}>
           {/* Bell */}
-          <button
-            className="hud-btn"
-            style={{ background: notificationEnabled ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.45)' }}
-            onClick={() => {
-              toggleNotification();
-              setIsHudMenuOpen(false);
-            }}
-            title={notificationEnabled ? "關閉提醒" : "開啟提醒"}
-          >
-            {notificationEnabled ? <Bell size={18} strokeWidth={2.5} /> : <BellOff size={18} strokeWidth={2.5} />}
-          </button>
+          <div className="hud-tooltip-container">
+            <button
+              className="hud-btn"
+              style={{ background: notificationEnabled ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.45)' }}
+              onClick={() => {
+                toggleNotification();
+                setIsHudMenuOpen(false);
+              }}
+              title={notificationEnabled ? "關閉提醒" : "開啟提醒"}
+            >
+              {notificationEnabled ? <Bell size={18} strokeWidth={2.5} /> : <BellOff size={18} strokeWidth={2.5} />}
+            </button>
+            <div className="hud-tooltip">
+              將會在以下時段提醒要認領禱告：{'\n'}
+              早上：8:00{'\n'}
+              中午：12:00{'\n'}
+              晚上：18:30
+            </div>
+          </div>
 
           {/* Guide */}
           <button

@@ -1490,3 +1490,39 @@ input[type="range"]::-moz-range-thumb:hover {
 .dock-scroll-area::-webkit-scrollbar {
   display: none;
 }
+
+/* --- HUD Tooltip --- */
+.hud-tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-tooltip {
+  visibility: hidden;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 2000;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: max-content;
+  max-width: 220px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 0.3s, visibility 0.3s;
+  pointer-events: none;
+  white-space: pre-line;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-tooltip-container:hover .hud-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
