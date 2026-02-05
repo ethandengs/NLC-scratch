@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { AssetSheep } from './AssetSheep';
 import { generateVisuals, parseMaturity } from '../utils/gameLogic';
 import { ASSETS } from '../utils/AssetRegistry';
+// AuthContext import removed
 
 const ACCESSORIES = [
     { id: 'none', label: '無' },
@@ -13,13 +14,14 @@ const ACCESSORIES = [
 ];
 
 export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
+    const { isAdmin } = useGame(); // Get isAdmin directly
     const [isBatchMode, setIsBatchMode] = useState(false);
 
     // Basic Info
     const [name, setName] = useState(editingSheep?.name || '');
     const [note, setNote] = useState(editingSheep?.note || '');
     const [spiritualMaturity, setSpiritualMaturity] = useState('');
-    const [maturityStage, setMaturityStage] = useState('學習中');
+    // maturityStage removed
 
     // Visual Info
     // Randomize on mount if new
@@ -37,9 +39,11 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
     // Load initial maturity strings
     useEffect(() => {
         if (editingSheep?.spiritualMaturity) {
-            const { level, stage } = parseMaturity(editingSheep.spiritualMaturity);
+            // Simplified: just take the whole string or parse level only if needed.
+            // Since stage is gone, we assume existing data might have it but we only care about the Level part if we were separating them.
+            // But now we just want "Level".
+            const { level } = parseMaturity(editingSheep.spiritualMaturity);
             setSpiritualMaturity(level);
-            setMaturityStage(stage || '學習中');
         }
     }, [editingSheep]);
 
@@ -71,7 +75,7 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
 
                 sheepData.push({
                     name: sName,
-                    spiritualMaturity: parts[1] && parts[2] ? `${parts[1]} (${parts[2]})` : (parts[1] || ''),
+                    spiritualMaturity: parts[1] || '', // Ignore 3rd part (Stage)
                     visual: { variant: randomVariant, accessory: 'none' },
                     skinId: null
                 });
@@ -88,10 +92,8 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
         if (!validNameRegex.test(trimmedName)) return alert("名稱無效");
         if (trimmedName.length > 12) return alert("名稱太長");
 
+        // finalMaturity is just the level now
         let finalMaturity = spiritualMaturity;
-        if (spiritualMaturity && maturityStage) {
-            finalMaturity = `${spiritualMaturity} (${maturityStage})`;
-        }
 
         onConfirm({
             name: trimmedName,
@@ -150,7 +152,14 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
 
                     {(!isBatchMode || isEditing) ? (
                         <>
-                            {/* Visual Controls REMOVED */}
+                            {isAdmin && (
+                                <div style={{ marginBottom: '8px' }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '2px' }}>外觀 (Admin)</label>
+                                    <select style={{ width: '100%', padding: '4px' }} value={selectedVariant} onChange={e => setSelectedVariant(e.target.value)}>
+                                        {ASSETS.VARIANT_OPTIONS.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Basic Info */}
                             {!isEditing && (
@@ -171,17 +180,7 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                                                 <option value="基督徒">基督徒</option>
                                             </select>
                                         </div>
-                                        {spiritualMaturity && (
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '2px' }}>階段</label>
-                                                <select value={maturityStage} onChange={e => setMaturityStage(e.target.value)}
-                                                    style={{ width: '100%', padding: '6px', border: '1px solid #ccc', borderRadius: '5px' }}>
-                                                    <option value="學習中">學習中</option>
-                                                    <option value="穩定">穩定</option>
-                                                    <option value="領袖">領袖</option>
-                                                </select>
-                                            </div>
-                                        )}
+                                        {/* Stage Selector Removed */}
                                     </div>
                                     <div style={{ marginTop: '4px' }}>
                                         <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '2px' }}>備註</label>

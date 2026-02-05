@@ -46,6 +46,7 @@ const useLongPress = (onLongPress, onClick, { shouldPreventDefault = true, delay
         onTouchStart: (e) => start(e),
         onMouseUp: (e) => clear(e),
         onMouseLeave: (e) => clear(e, false),
+        onTouchMove: (e) => clear(e, false), // Cancel long press on move (scroll)
         onTouchEnd: (e) => clear(e)
     };
 };
@@ -72,7 +73,7 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
         <div
             className={`sheep-card ${isSelectionMode && isSelected ? 'selected' : ''} ${isSelectionMode ? 'sheep-card--select-mode' : ''}`}
             {...longPressEventHandlers}
-            style={{ touchAction: 'none', userSelect: 'none' }} // Prevent browser zoom/menu during long press
+            style={{ touchAction: 'manipulation', userSelect: 'none' }} // 'manipulation' allows scroll but blocks double-tap zoom
         >
             {isSelectionMode && (
                 <div className={`sheep-card-selection-dot ${isSelected ? 'sheep-card-selection-dot--selected' : ''}`}>
