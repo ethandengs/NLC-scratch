@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useGame } from '../context/GameContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { AssetSheep } from './AssetSheep';
 import { AddSheepModal } from './AddSheepModal';
@@ -338,6 +339,7 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
 // --- Main List Component ---
 export const SheepList = ({ onSelect }) => {
     const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep, settings, togglePin, tags, tagAssignmentsBySheep } = useGame();
+    const confirm = useConfirm();
     const pinnedSet = useMemo(() => new Set(settings?.pinnedSheepIds || []), [settings?.pinnedSheepIds]);
     const sortedSheep = useMemo(() => {
         return [...(sheep || [])].sort((a, b) => {
@@ -433,31 +435,46 @@ export const SheepList = ({ onSelect }) => {
         }
     };
 
-    const handleDeleteSelected = () => {
+    const handleDeleteSelected = async () => {
         if (selectedIds.size === 0) return;
-        if (window.confirm(`確定要刪除這 ${selectedIds.size} 隻小羊嗎？`)) {
-            deleteMultipleSheep(Array.from(selectedIds));
-            setIsSelectionMode(false);
-            setSelectedIds(new Set());
-        }
+        const n = selectedIds.size;
+        console.log('[SheepList] delete selected clicked', { count: n });
+        const ok = await confirm({
+            title: '刪除小羊',
+            message: `確定要刪除這 ${n} 隻小羊嗎？`,
+            warning: '此操作無法復原。',
+            variant: 'danger',
+            confirmLabel: '刪除'
+        });
+        console.log('[SheepList] confirm result', ok);
+        if (!ok) return;
+        deleteMultipleSheep(Array.from(selectedIds));
+        setIsSelectionMode(false);
+        setSelectedIds(new Set());
     };
 
-    const handleResetSelected = () => {
+    const handleResetSelected = async () => {
         if (selectedIds.size === 0) return;
-        if (window.confirm(`確定要將這 ${selectedIds.size} 隻小羊的狀態重置為「健康 (100%)」嗎？`)) {
-            // Reset logic: Restore health, status, clear logs
-            updateMultipleSheep(Array.from(selectedIds), {
-                health: 100,
-                status: 'healthy',
-                careLevel: 0,
-                resurrectionProgress: 0,
-                awakeningProgress: 0,
-                lastPrayedDate: null,
-                prayedCount: 0
-            });
-            setIsSelectionMode(false);
-            setSelectedIds(new Set());
-        }
+        const n = selectedIds.size;
+        console.log('[SheepList] reset selected clicked', { count: n });
+        const ok = await confirm({
+            title: '重置狀態',
+            message: `確定要將這 ${n} 隻小羊重置為「健康 (100%)」嗎？`,
+            variant: 'default'
+        });
+        console.log('[SheepList] confirm result', ok);
+        if (!ok) return;
+        updateMultipleSheep(Array.from(selectedIds), {
+            health: 100,
+            status: 'healthy',
+            careLevel: 0,
+            resurrectionProgress: 0,
+            awakeningProgress: 0,
+            lastPrayedDate: null,
+            prayedCount: 0
+        });
+        setIsSelectionMode(false);
+        setSelectedIds(new Set());
     };
 
     const handleConfirmAdd = (data) => {
@@ -650,7 +667,7 @@ export const SheepList = ({ onSelect }) => {
                                         onClick={() => setFilterStatus(f.id)}
                                         style={{
                                             opacity: isCollapsed ? 0.6 : 1,
-                                            ...(f.color && effectiveFilterStatus === f.id && { borderColor: f.color, color: f.color, background: `${f.color}20` })
+                                            ...(f.color && effectiveFilterStatus === f.id && { borderColor: f.color, color: '#fff', background: f.color })
                                         }}
                                     >
                                         {f.label} {counts[f.id] ?? 0}
@@ -661,13 +678,14 @@ export const SheepList = ({ onSelect }) => {
                                 <div style={{ position: 'relative', display: 'inline-flex' }} ref={filterMenuAnchorRef}>
                                     <button
                                         type="button"
-                                        className={`dock-toolbar-chip ${showFilterMenu ? 'dock-toolbar-chip--selected' : ''}`}
+                                        className={`dock-toolbar-chip dock-toolbar-chip--settings ${showFilterMenu ? 'dock-toolbar-chip--selected' : ''}`}
                                         onClick={() => setShowFilterMenu(prev => !prev)}
                                         style={{ opacity: isCollapsed ? 0.6 : 1 }}
                                         title="篩選設定"
                                         aria-label="篩選設定"
                                     >
                                         <SlidersHorizontal size={14} strokeWidth={2.5} />
+                                        <span>篩選設定</span>
                                     </button>
                                     {showFilterMenu && (
                                         <FilterSettingsMenu

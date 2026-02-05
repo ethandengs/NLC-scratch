@@ -1,0 +1,76 @@
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+
+const ConfirmContext = createContext(null);
+
+export const useConfirm = () => {
+    const ctx = useContext(ConfirmContext);
+    if (!ctx) {
+        throw new Error('useConfirm must be used within ConfirmDialogProvider');
+    }
+    return typeof ctx === 'function' ? ctx : ctx.confirm;
+};
+
+export const ConfirmDialogProvider = ({ children }) => {
+    const resolveRef = useRef(null);
+    const [state, setState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        warning: null,
+        confirmLabel: '確定',
+        cancelLabel: '取消',
+        variant: 'default'
+    });
+
+    const confirm = useCallback((options = {}) => {
+        return new Promise((resolve) => {
+            console.log('[Confirm] open', options);
+            resolveRef.current = resolve;
+            setState({
+                open: true,
+                title: options.title ?? '確認',
+                message: options.message ?? '',
+                warning: options.warning ?? null,
+                confirmLabel: options.confirmLabel ?? (options.variant === 'danger' ? '刪除' : '確定'),
+                cancelLabel: options.cancelLabel ?? '取消',
+                variant: options.variant ?? 'default'
+            });
+        });
+    }, []);
+
+    const handleConfirm = useCallback(() => {
+        console.log('[Confirm] confirm click');
+        resolveRef.current?.(true);
+        resolveRef.current = null;
+        setState(prev => ({ ...prev, open: false }));
+    }, []);
+
+    const handleCancel = useCallback(() => {
+        console.log('[Confirm] cancel click');
+        resolveRef.current?.(false);
+        resolveRef.current = null;
+        setState(prev => ({ ...prev, open: false }));
+    }, []);
+
+    return (
+        <ConfirmContext.Provider value={confirm}>
+            {children}
+            {ReactDOM.createPortal(
+                <ConfirmDialog
+                    open={state.open}
+                    title={state.title}
+                    message={state.message}
+                    warning={state.warning}
+                    confirmLabel={state.confirmLabel}
+                    cancelLabel={state.cancelLabel}
+                    variant={state.variant}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancel}
+                />,
+                document.body
+            )}
+        </ConfirmContext.Provider>
+    );
+};
