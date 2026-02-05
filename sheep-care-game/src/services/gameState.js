@@ -109,8 +109,8 @@ export const gameState = {
 
 
             // 2. Merge Instance Attributes (This overrides template defaults)
-            // User renamed to Spiritual_Journey_Planning
-            const rawCol = s.Spiritual_Journey_Planning || s.visual_attrs || {}; // Fallback for transition
+            // Renamed from 'Spiritual_Journey_Planning' to 'sheep_data'
+            const rawCol = s.sheep_data || s.Spiritual_Journey_Planning || s.visual_attrs || {};
             const { plan, ...instanceVisuals } = rawCol;
 
             if (instanceVisuals) {
@@ -144,7 +144,6 @@ export const gameState = {
     },
 
     // Helper: Ensure a skin exists for the sheep (Programmatic)
-    // Helper: Ensure a skin exists for the sheep (Programmatic)
     // V13 Update: For Programmatic sheep, we DON'T create new skins anymore.
     // We only create skins for IMAGES.
     // For Programmatic, we return the Master Skin ID.
@@ -171,9 +170,8 @@ export const gameState = {
             health: sheep.health,
 
             // V13: Save attributes here
-            // User renamed 'visual_attrs' to 'Spiritual_Journey_Planning'
-            // We store visual attributes AND spiritual plan here.
-            Spiritual_Journey_Planning: { ...sheep.visual, plan: sheep.plan },
+            // Consolidated visual attributes and plan into 'sheep_data'
+            sheep_data: { ...sheep.visual, plan: sheep.plan },
 
             // New Columns (Snake Case)
             x: sheep.x,
@@ -211,16 +209,16 @@ export const gameState = {
             // For safety, we map what we have.
             // visual: row.visual_attrs || {}, // OLD
 
-            // NEW: Parse Spiritual_Journey_Planning
+            // NEW: Parse sheep_data
             // It contains { ...visual, plan: { ... } }
             visual: (() => {
-                const raw = row.Spiritual_Journey_Planning || {};
+                const raw = row.sheep_data || row.Spiritual_Journey_Planning || {};
                 const { plan, ...vis } = raw;
                 return vis; // Return just visual parts for 'visual' prop
             })(),
 
             // Extract Plan
-            plan: (row.Spiritual_Journey_Planning && row.Spiritual_Journey_Planning.plan) || {},
+            plan: ((row.sheep_data || row.Spiritual_Journey_Planning) && (row.sheep_data || row.Spiritual_Journey_Planning).plan) || {},
 
             // We iterate on 'visual_attrs' for compatibility if needed, but row likely has new col
             // visual_attrs: row.visual_attrs, 
