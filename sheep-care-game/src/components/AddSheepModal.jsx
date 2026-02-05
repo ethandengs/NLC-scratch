@@ -211,13 +211,12 @@ export const AddSheepModal = ({ onConfirm, onCancel, editingSheep = null }) => {
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
-                        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '8px', background: '#ccc', border: 'none', borderRadius: '5px' }}>取消</button>
+                    <div style={{ marginTop: 'auto' }}>
                         <button
                             type="submit"
                             disabled={isBatchMode ? !batchInput.trim() : !name.trim()}
                             style={{
-                                flex: 1,
+                                width: '100%',
                                 padding: '8px',
                                 background: (isBatchMode ? !batchInput.trim() : !name.trim()) ? '#ccc' : '#66bb6a',
                                 color: 'white',
