@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, Plus, ChevronRight, Calendar, Info, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { calculateSheepState, isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { supabase } from '../services/supabaseClient';
 import { TagManagerModal } from './TagManagerModal';
@@ -122,6 +123,7 @@ const TagSelect = ({ sheepId, tags, assignedIds, onSave }) => {
 
 export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
     const { sheep, updateSheep, prayForSheep, deleteSheep, forceLoadFromCloud, isAdmin, lineId, tags, tagAssignmentsBySheep, setSheepTags } = useGame();
+    const confirm = useConfirm();
     const modalRef = useRef(null);
     const closeBtnRef = useRef(null);
 
@@ -293,7 +295,15 @@ export const SheepDetailModal = ({ selectedSheepId, onClose }) => {
     };
 
     const handleDeletePlan = async (id) => {
-        if (!window.confirm('確定要刪除此規劃嗎？')) return;
+        console.log('[SheepDetailModal] delete plan clicked', { planId: id });
+        const ok = await confirm({
+            title: '刪除規劃',
+            message: '確定要刪除此靈程規劃嗎？',
+            variant: 'danger',
+            confirmLabel: '刪除'
+        });
+        console.log('[SheepDetailModal] confirm result', ok);
+        if (!ok) return;
 
         setPlanActionLoading(true);
         try {

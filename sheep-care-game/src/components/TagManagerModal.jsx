@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 
 export const TagManagerModal = ({ onClose }) => {
-    const { tags, createTag, updateTag, deleteTag } = useGame();
+    const { tags, createTag, updateTag, deleteTag, tagAssignmentsBySheep } = useGame();
+    const confirm = useConfirm();
     const [newName, setNewName] = useState('');
     const [newColor, setNewColor] = useState('#6b7280');
     const [editingId, setEditingId] = useState(null);
@@ -34,11 +36,26 @@ export const TagManagerModal = ({ onClose }) => {
         }
     };
 
-    const handleDelete = async (tagId) => {
-        if (!window.confirm('確定要刪除此標籤嗎？')) return;
+    const handleDelete = async (tag) => {
+        console.log('[TagManagerModal] delete clicked', { tagId: tag.id, tagName: tag.name });
+        const affectedCount = Object.values(tagAssignmentsBySheep || {}).filter(
+            assignments => assignments.some(a => a.tagId === tag.id)
+        ).length;
+        const warning = affectedCount > 0
+            ? `此標籤目前套用於 ${affectedCount} 隻小羊，刪除後將全部移除，且無法復原。`
+            : '刪除後無法復原。';
+        const ok = await confirm({
+            title: '刪除標籤',
+            message: `確定要刪除「${tag.name}」嗎？`,
+            warning,
+            variant: 'danger',
+            confirmLabel: '刪除'
+        });
+        console.log('[TagManagerModal] confirm result', ok);
+        if (!ok) return;
         setLoading(true);
         try {
-            await deleteTag(tagId);
+            await deleteTag(tag.id);
         } finally {
             setLoading(false);
         }
@@ -191,7 +208,7 @@ export const TagManagerModal = ({ onClose }) => {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDelete(tag.id)}
+                                                    onClick={() => handleDelete(tag)}
                                                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--palette-danger)' }}
                                                     aria-label="刪除"
                                                 >

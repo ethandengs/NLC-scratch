@@ -5,13 +5,16 @@ import './index.css'
 import './debug.css'
 import App from './App.jsx'
 import { GameProvider } from './context/GameContext.jsx'
+import { ConfirmDialogProvider } from './context/ConfirmContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <GameProvider>
-        <App />
+        <ConfirmDialogProvider>
+          <App />
+        </ConfirmDialogProvider>
       </GameProvider>
     </ErrorBoundary>
   </StrictMode>,

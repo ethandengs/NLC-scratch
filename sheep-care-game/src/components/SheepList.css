@@ -323,6 +323,22 @@
   border-color: var(--palette-sheep-brown);
 }
 
+.dock-toolbar-chip--settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-style: solid;
+  border-color: var(--palette-sheep-brown);
+  color: var(--palette-sheep-brown);
+  background: rgba(143, 125, 103, 0.18);
+}
+
+.dock-toolbar-chip--settings.dock-toolbar-chip--selected {
+  background: var(--palette-sheep-brown);
+  color: white;
+  border-color: var(--palette-sheep-brown);
+}
+
 .dock-toolbar-select-btn {
   margin-left: auto;
   padding: 4px 12px;
