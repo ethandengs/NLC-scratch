@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const ConfirmContext = createContext(null);
+const isDev = import.meta?.env?.MODE !== 'production';
 
 export const useConfirm = () => {
     const ctx = useContext(ConfirmContext);
@@ -27,6 +28,9 @@ export const ConfirmDialogProvider = ({ children }) => {
     const confirm = useCallback((options = {}) => {
         return new Promise((resolve) => {
             resolveRef.current = resolve;
+            if (isDev) {
+                console.debug('[confirm] open', options);
+            }
             setState({
                 open: true,
                 title: options.title ?? '確認',
@@ -40,12 +44,18 @@ export const ConfirmDialogProvider = ({ children }) => {
     }, []);
 
     const handleConfirm = useCallback(() => {
+        if (isDev) {
+            console.debug('[confirm] confirm');
+        }
         resolveRef.current?.(true);
         resolveRef.current = null;
         setState(prev => ({ ...prev, open: false }));
     }, []);
 
     const handleCancel = useCallback(() => {
+        if (isDev) {
+            console.debug('[confirm] cancel');
+        }
         resolveRef.current?.(false);
         resolveRef.current = null;
         setState(prev => ({ ...prev, open: false }));

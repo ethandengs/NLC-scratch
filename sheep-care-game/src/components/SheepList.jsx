@@ -6,7 +6,7 @@ import { isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { AssetSheep } from './AssetSheep';
 import { AddSheepModal } from './AddSheepModal';
 import { TagManagerModal } from './TagManagerModal';
-import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal, X, Search } from 'lucide-react';
 import '../styles/design-tokens.css';
 import './SheepList.css';
 
@@ -344,15 +344,28 @@ export const SheepList = ({ onSelect }) => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [editingSheep, setEditingSheep] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [showAddModal, setShowAddModal] = useState(false);
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [showTagManagerModal, setShowTagManagerModal] = useState(false);
     const hiddenFilterIds = useMemo(() => new Set(settings?.hiddenFilters || []), [settings?.hiddenFilters]);
     const filterMenuAnchorRef = useRef(null);
+    const searchWrapRef = useRef(null);
 
     // Collapsible State (Default Open)
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (!searchWrapRef.current) return;
+            if (!searchWrapRef.current.contains(e.target)) {
+                setIsSearchExpanded(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const toggleFilterVisibility = (filterId) => {
         const next = new Set(hiddenFilterIds);
@@ -530,7 +543,7 @@ export const SheepList = ({ onSelect }) => {
 
                 {/* Toolbar: Add | Search | Filters | Select */}
                 <div
-                    className="dock-child dock-toolbar"
+                    className={`dock-child dock-toolbar ${isSearchExpanded ? 'dock-toolbar--search-expanded' : ''}`}
                     onClick={handleToolbarClick}
                 >
                     {/* Inner wrapper: functional when Open, pass-through when Collapsed */}
@@ -544,16 +557,21 @@ export const SheepList = ({ onSelect }) => {
                             <>
                                 <span className="dock-toolbar-label">已選取 {selectedIds.size}</span>
 
-                                <div className="dock-toolbar-search-wrap">
+                                <div
+                                    ref={searchWrapRef}
+                                    className={`dock-toolbar-search-wrap ${isSearchExpanded ? 'dock-toolbar-search-wrap--expanded' : ''}`}
+                                >
                                     <input
                                         type="text"
                                         className="dock-toolbar-search-input"
                                         placeholder="搜尋..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{ width: searchTerm ? '120px' : '80px' }}
+                                        onFocus={() => setIsSearchExpanded(true)}
                                     />
-                                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+                                    <span className="dock-toolbar-search-icon" aria-hidden="true">
+                                        <Search size={16} strokeWidth={2.5} />
+                                    </span>
                                 </div>
 
                                 <button
@@ -618,16 +636,22 @@ export const SheepList = ({ onSelect }) => {
                                 </button>
 
                                 {/* 2. Search Bar */}
-                                <div className="dock-toolbar-search-wrap" style={{ opacity: isCollapsed ? 0.6 : 1 }}>
+                                <div
+                                    ref={searchWrapRef}
+                                    className={`dock-toolbar-search-wrap ${isSearchExpanded ? 'dock-toolbar-search-wrap--expanded' : ''}`}
+                                    style={{ opacity: isCollapsed ? 0.6 : 1 }}
+                                >
                                     <input
                                         type="text"
                                         className="dock-toolbar-search-input"
                                         placeholder="搜尋..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{ width: searchTerm ? '120px' : '80px' }}
+                                        onFocus={() => setIsSearchExpanded(true)}
                                     />
-                                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+                                    <span className="dock-toolbar-search-icon" aria-hidden="true">
+                                        <Search size={16} strokeWidth={2.5} />
+                                    </span>
                                 </div>
 
                                 {/* Divider */}

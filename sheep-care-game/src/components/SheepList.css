@@ -237,6 +237,10 @@
   min-height: 56px;
 }
 
+.dock-toolbar--search-expanded {
+  overflow-x: visible;
+}
+
 .dock-toolbar-label {
   color: var(--palette-sheep-brown);
   font-weight: bold;
@@ -275,6 +279,8 @@
   height: 36px;
   flex-shrink: 0;
   transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
 }
 
 .dock-toolbar-search-input {
@@ -283,14 +289,50 @@
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--palette-sheep-brown);
   outline: none;
-  transition: width 0.2s;
+  width: 120px;
+  line-height: 36px;
+  box-sizing: border-box;
+  transition: width 0.2s ease;
+}
+
+.dock-toolbar-search-wrap--expanded {
+  flex: 1 1 100%;
+  min-width: 40%;
+}
+
+.dock-toolbar-search-wrap--expanded .dock-toolbar-search-input {
+  width: 100%;
 }
 
 .dock-toolbar-search-input::placeholder {
   color: var(--palette-taupe);
+}
+
+.dock-toolbar-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@media (max-width: 520px) {
+  .dock-toolbar-search-input {
+    font-size: 0.8rem;
+    width: 80px;
+  }
+  .dock-toolbar-search-wrap--expanded {
+    min-width: 85%;
+  }
 }
 
 .dock-toolbar-divider {

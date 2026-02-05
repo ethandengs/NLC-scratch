@@ -1441,6 +1441,10 @@ input[type="range"]::-moz-range-thumb:hover {
   cursor: pointer;
 }
 
+.confirm-dialog-overlay {
+  z-index: 20000;
+}
+
 /* --- Profile HUD Widget (Revamped) --- */
 .profile-hud-widget {
   position: absolute;

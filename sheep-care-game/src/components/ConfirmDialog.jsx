@@ -34,12 +34,12 @@ export const ConfirmDialog = ({
 
     return (
         <div
-            className="debug-editor-overlay"
+            className="debug-editor-overlay confirm-dialog-overlay"
             onClick={onCancel}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="confirm-dialog-title"
-            style={{ zIndex: 10000 }}
+            style={{ zIndex: 20000 }}
         >
             <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '360px' }}>
                 <div className="modal-header">
