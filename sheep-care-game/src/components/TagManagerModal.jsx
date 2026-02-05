@@ -71,14 +71,22 @@ export const TagManagerModal = ({ onClose }) => {
                                 onChange={(e) => setNewName(e.target.value)}
                                 placeholder="標籤名稱"
                                 maxLength={12}
-                                style={{ flex: 1, minWidth: '100px' }}
+                                style={{ flex: 1, minWidth: 100, minHeight: 44, padding: '12px 16px', fontSize: 16 }}
                             />
                             <input
                                 type="color"
                                 value={newColor}
                                 onChange={(e) => setNewColor(e.target.value)}
                                 title="顏色"
-                                style={{ width: 36, height: 36, padding: 2, cursor: 'pointer', borderRadius: 6 }}
+                                style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                    padding: 4,
+                                    cursor: 'pointer',
+                                    borderRadius: 8
+                                }}
                             />
                             <button
                                 type="button"
@@ -103,8 +111,9 @@ export const TagManagerModal = ({ onClose }) => {
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '8px',
-                                            padding: '8px 10px',
+                                            gap: '10px',
+                                            flexWrap: 'wrap',
+                                            padding: '10px 12px',
                                             background: 'rgba(255,255,255,0.5)',
                                             borderRadius: 8,
                                             marginBottom: 6
@@ -116,23 +125,44 @@ export const TagManagerModal = ({ onClose }) => {
                                                     type="text"
                                                     value={editName}
                                                     onChange={(e) => setEditName(e.target.value)}
-                                                    style={{ flex: 1, padding: '4px 8px' }}
+                                                    style={{
+                                                        flex: 1,
+                                                        minWidth: 100,
+                                                        minHeight: 44,
+                                                        padding: '12px 16px',
+                                                        fontSize: 16
+                                                    }}
                                                 />
                                                 <input
                                                     type="color"
                                                     value={editColor}
                                                     onChange={(e) => setEditColor(e.target.value)}
-                                                    style={{ width: 28, height: 28, padding: 2, cursor: 'pointer', borderRadius: 4 }}
+                                                    title="顏色"
+                                                    style={{
+                                                        width: 44,
+                                                        height: 44,
+                                                        minWidth: 44,
+                                                        minHeight: 44,
+                                                        padding: 4,
+                                                        cursor: 'pointer',
+                                                        borderRadius: 8
+                                                    }}
                                                 />
                                                 <button
                                                     type="button"
                                                     className="modal-btn-primary"
                                                     onClick={() => handleUpdate(tag.id)}
                                                     disabled={loading || !editName.trim()}
+                                                    style={{ padding: '8px 16px', width: 'auto', flexShrink: 0 }}
                                                 >
                                                     儲存
                                                 </button>
-                                                <button type="button" className="modal-btn-secondary" onClick={cancelEdit}>
+                                                <button
+                                                    type="button"
+                                                    className="modal-btn-secondary"
+                                                    onClick={cancelEdit}
+                                                    style={{ padding: '8px 14px', width: 'auto', flexShrink: 0 }}
+                                                >
                                                     取消
                                                 </button>
                                             </>
