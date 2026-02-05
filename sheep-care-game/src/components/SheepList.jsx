@@ -1,11 +1,180 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useGame } from '../context/GameContext';
 import { isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { AssetSheep } from './AssetSheep';
 import { AddSheepModal } from './AddSheepModal';
-import { Plus, Trash2, RotateCcw, CheckSquare } from 'lucide-react';
+import { TagManagerModal } from './TagManagerModal';
+import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import '../styles/design-tokens.css';
 import './SheepList.css';
+
+const FILTER_VISIBILITY_KEY = 'sheep_filter_visibility';
+
+const loadHiddenFilters = () => {
+    try {
+        const raw = localStorage.getItem(FILTER_VISIBILITY_KEY);
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+        return new Set();
+    }
+};
+
+const saveHiddenFilters = (hidden) => {
+    try {
+        localStorage.setItem(FILTER_VISIBILITY_KEY, JSON.stringify([...hidden]));
+    } catch (e) {
+        console.warn('Failed to save filter visibility', e);
+    }
+};
+
+const FilterSettingsMenu = ({ filters, hiddenFilterIds, onToggle, onManageTags, onClose, anchorRef }) => {
+    const menuRef = useRef(null);
+    const scrollRef = useRef(null);
+    const [position, setPosition] = useState({ bottom: 0, right: 0 });
+    const [showFadeOverlay, setShowFadeOverlay] = useState(false);
+
+    const checkScrollState = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const { scrollHeight, clientHeight, scrollTop } = el;
+        const hasOverflow = scrollHeight > clientHeight;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
+        setShowFadeOverlay(hasOverflow && !isAtBottom);
+    }, []);
+
+    useEffect(() => {
+        const id = requestAnimationFrame(() => checkScrollState());
+        return () => cancelAnimationFrame(id);
+    }, [checkScrollState, filters]);
+
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(() => requestAnimationFrame(checkScrollState));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [checkScrollState]);
+
+    useEffect(() => {
+        const updatePosition = () => {
+            if (anchorRef?.current) {
+                const rect = anchorRef.current.getBoundingClientRect();
+                setPosition({
+                    bottom: window.innerHeight - rect.top + 8,
+                    right: window.innerWidth - rect.right
+                });
+            }
+        };
+        updatePosition();
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [anchorRef]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target) && anchorRef?.current && !anchorRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose, anchorRef]);
+
+    return ReactDOM.createPortal(
+        <div
+            ref={menuRef}
+            className="filter-settings-menu"
+            style={{
+                position: 'fixed',
+                bottom: position.bottom,
+                right: position.right,
+                minWidth: '200px',
+                maxHeight: '280px',
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'var(--card-inner-bg, #fff)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
+                zIndex: 2500
+            }}
+        >
+            <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <div
+                    ref={scrollRef}
+                    onScroll={checkScrollState}
+                    style={{ padding: '12px 12px 0', flex: 1, minHeight: 0, overflowY: 'auto' }}
+                >
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '10px', color: '#666' }}>顯示篩選</div>
+                {filters.map((f) => {
+                    const isHidden = hiddenFilterIds.has(f.id);
+                    return (
+                        <label
+                            key={f.id}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '6px 0',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={!isHidden}
+                                onChange={() => onToggle(f.id)}
+                            />
+                            {f.color ? (
+                                <span
+                                    style={{
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: 4,
+                                        background: f.color
+                                    }}
+                                />
+                            ) : null}
+                            <span>{f.label}</span>
+                        </label>
+                    );
+                })}
+                </div>
+                {showFadeOverlay && (
+                    <div
+                        aria-hidden
+                        style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: 45,
+                            background: 'linear-gradient(to top, var(--card-inner-bg, #fff) 0%, transparent 100%)',
+                            pointerEvents: 'none',
+                            transition: 'opacity 0.2s ease'
+                        }}
+                    />
+                )}
+            </div>
+            <div style={{ borderTop: '1px solid rgba(0,0,0,0.1)', padding: '12px', flexShrink: 0 }}>
+                <button
+                    type="button"
+                    className="modal-btn-secondary"
+                    onClick={onManageTags}
+                    style={{ width: '100%', fontSize: '0.85rem', padding: '8px 12px' }}
+                >
+                    管理標籤
+                </button>
+            </div>
+        </div>,
+        document.body
+    );
+};
 
 // --- Card Component (tag design aligned with SheepListModal.tsx) ---
 const useLongPress = (onLongPress, onClick, { shouldPreventDefault = true, delay = 500 } = {}) => {
@@ -183,10 +352,26 @@ export const SheepList = ({ onSelect }) => {
     const [editingSheep, setEditingSheep] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
-    const [showAddModal, setShowAddModal] = useState(false); // New explicit state for Add Modal
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [showTagManagerModal, setShowTagManagerModal] = useState(false);
+    const [hiddenFilterIds, setHiddenFilterIds] = useState(loadHiddenFilters);
+    const filterMenuAnchorRef = useRef(null);
 
     // Collapsible State (Default Open)
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const toggleFilterVisibility = (filterId) => {
+        setHiddenFilterIds(prev => {
+            const next = new Set(prev);
+            if (next.has(filterId)) next.delete(filterId);
+            else next.add(filterId);
+            saveHiddenFilters(next);
+            return next;
+        });
+    };
+
+    const effectiveFilterStatus = hiddenFilterIds.has(filterStatus) ? 'ALL' : filterStatus;
 
     const TAG_FILTER_PREFIX = 'TAG:';
 
@@ -197,17 +382,17 @@ export const SheepList = ({ onSelect }) => {
         const isPinned = settings?.pinnedSheepIds?.includes(s.id);
 
         if (!matchesSearch) return false;
-        if (filterStatus === 'SLEEPING') return isSleepingState;
-        if (filterStatus === 'SICK') return isSick;
-        if (filterStatus === 'HEALTHY') return !isSleepingState && !isSick;
-        if (filterStatus === 'PINNED') return isPinned;
-        if (filterStatus.startsWith(TAG_FILTER_PREFIX)) {
-            const tagId = filterStatus.slice(TAG_FILTER_PREFIX.length);
+        if (effectiveFilterStatus === 'SLEEPING') return isSleepingState;
+        if (effectiveFilterStatus === 'SICK') return isSick;
+        if (effectiveFilterStatus === 'HEALTHY') return !isSleepingState && !isSick;
+        if (effectiveFilterStatus === 'PINNED') return isPinned;
+        if (effectiveFilterStatus.startsWith(TAG_FILTER_PREFIX)) {
+            const tagId = effectiveFilterStatus.slice(TAG_FILTER_PREFIX.length);
             const assigned = tagAssignmentsBySheep[s.id] || [];
             return assigned.some(a => a.tagId === tagId);
         }
         return true;
-    }), [sortedSheep, searchTerm, filterStatus, settings?.pinnedSheepIds, tagAssignmentsBySheep]);
+    }), [sortedSheep, searchTerm, effectiveFilterStatus, settings?.pinnedSheepIds, tagAssignmentsBySheep]);
 
     const counts = useMemo(() => {
         const acc = { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, SLEEPING: 0, PINNED: 0 };
@@ -455,22 +640,58 @@ export const SheepList = ({ onSelect }) => {
                                     { id: 'SICK', label: '生病' },
                                     { id: 'SLEEPING', label: '沉睡' },
                                     ...(tags || []).map(t => ({ id: `${TAG_FILTER_PREFIX}${t.id}`, label: t.name, color: t.color }))
-                                ].map(f => (
+                                ]
+                                    .filter(f => !hiddenFilterIds.has(f.id))
+                                    .map(f => (
                                     <button
                                         type="button"
                                         key={f.id}
-                                        className={`dock-toolbar-chip ${filterStatus === f.id ? 'dock-toolbar-chip--selected' : ''}`}
+                                        className={`dock-toolbar-chip ${effectiveFilterStatus === f.id ? 'dock-toolbar-chip--selected' : ''}`}
                                         onClick={() => setFilterStatus(f.id)}
                                         style={{
                                             opacity: isCollapsed ? 0.6 : 1,
-                                            ...(f.color && filterStatus === f.id && { borderColor: f.color, color: f.color, background: `${f.color}20` })
+                                            ...(f.color && effectiveFilterStatus === f.id && { borderColor: f.color, color: f.color, background: `${f.color}20` })
                                         }}
                                     >
                                         {f.label} {counts[f.id] ?? 0}
                                     </button>
                                 ))}
 
-                                {/* 4. Select Button */}
+                                {/* 4. Filter Settings */}
+                                <div style={{ position: 'relative', display: 'inline-flex' }} ref={filterMenuAnchorRef}>
+                                    <button
+                                        type="button"
+                                        className={`dock-toolbar-chip ${showFilterMenu ? 'dock-toolbar-chip--selected' : ''}`}
+                                        onClick={() => setShowFilterMenu(prev => !prev)}
+                                        style={{ opacity: isCollapsed ? 0.6 : 1 }}
+                                        title="篩選設定"
+                                        aria-label="篩選設定"
+                                    >
+                                        <SlidersHorizontal size={14} strokeWidth={2.5} />
+                                    </button>
+                                    {showFilterMenu && (
+                                        <FilterSettingsMenu
+                                            filters={[
+                                                { id: 'ALL', label: '全部' },
+                                                { id: 'PINNED', label: '📌釘選' },
+                                                { id: 'HEALTHY', label: '健康' },
+                                                { id: 'SICK', label: '生病' },
+                                                { id: 'SLEEPING', label: '沉睡' },
+                                                ...(tags || []).map(t => ({ id: `${TAG_FILTER_PREFIX}${t.id}`, label: t.name, color: t.color }))
+                                            ]}
+                                            hiddenFilterIds={hiddenFilterIds}
+                                            onToggle={toggleFilterVisibility}
+                                            onManageTags={() => {
+                                                setShowFilterMenu(false);
+                                                setShowTagManagerModal(true);
+                                            }}
+                                            onClose={() => setShowFilterMenu(false)}
+                                            anchorRef={filterMenuAnchorRef}
+                                        />
+                                    )}
+                                </div>
+
+                                {/* 5. Select Button */}
                                 <button
                                     type="button"
                                     className={`dock-toolbar-select-btn ${isSelectionMode ? 'dock-toolbar-select-btn--active' : ''}`}
@@ -569,6 +790,13 @@ export const SheepList = ({ onSelect }) => {
                             }}
                             onCancel={() => setEditingSheep(null)}
                         />
+                    </div>
+                )}
+
+                {/* Tag Manager Modal (from filter settings) */}
+                {showTagManagerModal && (
+                    <div className="dock-child" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 3000, pointerEvents: 'auto' }}>
+                        <TagManagerModal onClose={() => setShowTagManagerModal(false)} />
                     </div>
                 )}
             </div>
