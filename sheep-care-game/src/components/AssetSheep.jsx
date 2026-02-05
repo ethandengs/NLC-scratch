@@ -24,23 +24,16 @@ export const AssetSheep = ({
     // If Dead, use Ghost Asset.
     // Else default to Classic White.
     const imgSrc = useMemo(() => {
-        // Priority 1: GHOST (Sleeping)
+        // 1. Ghost (Sleeping/Dead)
         if (isSleepingState) return ASSETS.SHEEP_VARIANTS.GHOST;
 
-        // Determine Variant Key
-        let variantKey = 'CLASSIC_WHITE';
-        if (visual.skinUrl && ASSETS.SKIN_MAP && ASSETS.SKIN_MAP[visual.skinUrl]) {
-            variantKey = ASSETS.SKIN_MAP[visual.skinUrl];
-        }
-
-        // Get Variant Object
+        // 2. Resolve Variant
+        const variantKey = visual?.variant || 'CLASSIC_WHITE';
         const variant = ASSETS.SHEEP_VARIANTS[variantKey] || ASSETS.SHEEP_VARIANTS.CLASSIC_WHITE;
 
-        // Priority 2: SICK vs HEALTHY
-        if (status === 'sick') return variant.SICK;
-        return variant.HEALTHY;
-
-    }, [isSleepingState, status, visual.skinUrl]);
+        // 3. Return Healthy/Sick state
+        return status === 'sick' ? variant.SICK : variant.HEALTHY;
+    }, [isSleepingState, status, visual?.variant]);
 
     // --- 2. Animations ---
     // Object Animation: We animate the CONTAINER or the IMG itself.

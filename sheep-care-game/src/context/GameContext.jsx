@@ -68,7 +68,8 @@ export const GameProvider = ({ children }) => {
     const [introWatched, setIntroWatched] = useState(true); // Default true to avoid flash on init, set to false if confirmed new
     const [showIntroVideo, setShowIntroVideo] = useState(false);
 
-    const [skins, setSkins] = useState([]); // New Skins State
+
+
 
     // --- SETTINGS (Device Specific) ---
     const [settings, setSettings] = useState(() => {
@@ -103,92 +104,9 @@ export const GameProvider = ({ children }) => {
 
     // ... (Existing useEffects)
 
-    // --- SKINS LOGIC ---
-    const loadSkins = async (userId) => {
-        try {
-            let query = supabase.from('sheep_skins').select('*');
 
-            // If Admin, load ALL skins. If normal user, load public OR own.
-            if (userId !== 'admin') {
-                query = query.or(`is_public.eq.true,created_by.eq.${userId}`);
-            }
 
-            const { data, error } = await query;
 
-            if (error) {
-                // If table doesn't exist yet, just ignore
-                console.warn("Could not load skins (Table might not exist yet)", error);
-                return;
-            }
-            if (data) setSkins(data);
-        } catch (e) { console.error("Load Skins Error", e); }
-    };
-
-    const toggleSkinPublic = async (skinId, isPublic) => {
-        if (!lineId || !isAdmin) return;
-        try {
-            const { error } = await supabase
-                .from('sheep_skins')
-                .update({ is_public: isPublic })
-                .eq('id', skinId);
-
-            if (error) throw error;
-
-            // Update Local State
-            setSkins(prev => prev.map(s => s.id === skinId ? { ...s, is_public: isPublic } : s));
-            showMessage(isPublic ? "已設為公開 ✅" : "已設為私有 🔒");
-        } catch (e) {
-            console.error("Toggle Public Error", e);
-            showMessage("設定失敗 ❌");
-        }
-    };
-
-    const createSkin = async (name, fileOrUrl) => {
-        if (!lineId) return null;
-        try {
-            let finalUrl = fileOrUrl;
-
-            // 1. Upload if it's a File
-            if (fileOrUrl instanceof File) {
-                const fileExt = fileOrUrl.name.split('.').pop();
-                // Path: userId/timestamp.ext
-                const fileName = `${lineId}/${Date.now()}.${fileExt}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('skins')
-                    .upload(fileName, fileOrUrl);
-
-                if (uploadError) throw uploadError;
-
-                const { data } = supabase.storage
-                    .from('skins')
-                    .getPublicUrl(fileName);
-
-                finalUrl = data.publicUrl;
-            }
-
-            // 2. Insert DB Record
-            const newSkin = {
-                name,
-                type: 'image',
-                data: { url: finalUrl },
-                is_public: lineId === 'admin', // Admin uploads are public by default
-                created_by: lineId
-            };
-            const { data, error } = await supabase
-                .from('sheep_skins')
-                .insert([newSkin])
-                .select()
-                .single();
-
-            if (error) throw error;
-            setSkins(prev => [...prev, data]);
-            return data;
-        } catch (e) {
-            alert("創建失敗: " + e.message);
-            return null;
-        }
-    };
 
     // --- LIFF & Login Logic ---
     // ...
@@ -202,7 +120,6 @@ export const GameProvider = ({ children }) => {
 
         try {
             // New GameState Logic - pass LINE profile for persistence
-            await loadSkins(userId);
             const data = await gameState.loadGame(userId, { displayName, pictureUrl });
 
             if (data && data.user) {
@@ -324,17 +241,10 @@ export const GameProvider = ({ children }) => {
     const adoptSheep = async (data = {}) => {
         const { name = '小羊', spiritualMaturity = '', visual, skinId } = data; // visual from modal
 
-        // Optimistic UI
-        let skinData = null;
-        if (skinId && skins.length > 0) {
-            skinData = skins.find(s => s.id === skinId);
-        }
-
         const safeVisual = {
             ...generateVisuals(), // Fallback randoms
             ...(visual || {})     // Overrides from modal
         };
-        if (skinData) safeVisual.skinData = skinData;
 
         // Use Helper to determine initial state from raw health (60)
         const { health: initHealth, status: initStatus, type: initType } = calculateSheepState(60, 'healthy');
@@ -440,20 +350,7 @@ export const GameProvider = ({ children }) => {
         // The problem of "Duplication" comes from MERGING. We must NOT merge in handleLoginSuccess.
     }, []);
 
-    // User Settings State (Persisted in LocalStorage - Device Preference)
-    // User Settings State (Persisted in LocalStorage - Device Preference)
-    // Removed duplicate declaration here. The valid one is further down.
-    // Wait, the one further down was inserted by me. The one at top SHOULD be the valid one.
-    // The previous replacement inserted the NEW code at line 397+ (inside useEffect area?)
-    // Ah, I see I replaced `toggleNotification` which was lower down, but `settings` was defined at top.
-    // I accidentally pasted a SECOND `useState` for settings lower down. I should have just modified the top one.
-    // Correct Fix: Remove the duplicate lower down and update the top one properly.
-    // Actually, looking at the previous diff 194, I replaced `toggleNotification` with a block that INCLUDED `const [settings, setSettings]`.
-    // Since `settings` was ALREADY defined at line 49.
-    // So I have two definitions now.
-    // I need to remove the one I inserted at line ~400 and ensure the top one is correct.
-    // The top one WAS updated in Step 153 to act correctly.
-    // So I just need to remove the duplicate `settings` and `updateSetting` I added in Step 194.
+
 
     const toggleNotification = () => {
         const newState = !settings.notify;
@@ -878,9 +775,9 @@ export const GameProvider = ({ children }) => {
         <GameContext.Provider value={{
             currentUser, nickname, setNickname, userAvatarUrl, lineId, isAdmin,
             isLoading, // Exposed for App.jsx loading screen
-            sheep, skins, inventory, message, weather, // skins exposed
+            sheep, inventory, message, weather,
             location, updateUserLocation, isInClient, // Exposed
-            adoptSheep, updateSheep, updateMultipleSheep, createSkin, toggleSkinPublic, togglePin, // createSkin exposed
+            adoptSheep, updateSheep, updateMultipleSheep, togglePin,
             loginWithLine, loginAsAdmin, logout, // Exposed
             prayForSheep, deleteSheep, deleteMultipleSheep,
             saveToCloud, forceLoadFromCloud, // Exposed

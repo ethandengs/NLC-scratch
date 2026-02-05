@@ -86,12 +86,7 @@ export const gameState = {
         // Join with 'sheep_skins' (User specified table name)
         const { data: sheepList, error: sheepError } = await supabase
             .from('sheep')
-            .select(`
-                *,
-                skins:skin_id (
-                    id, type, data
-                )
-            `)
+            .select('*')
             .eq('user_id', userId);
 
         if (sheepError) {
@@ -110,9 +105,8 @@ export const gameState = {
 
             // 1. Start with Template (if any)
             let combinedVisual = {};
-            if (s.skins && s.skins.data) {
-                combinedVisual = { ...s.skins.data };
-            }
+            // Legacy skins logic removed
+
 
             // 2. Merge Instance Attributes (This overrides template defaults)
             // User renamed to Spiritual_Journey_Planning
@@ -157,18 +151,8 @@ export const gameState = {
     async _ensureSkin(sheep) {
         if (sheep.skinId) return sheep.skinId;
 
-        // V13 Pivot: Always link new sheep to the 'Standard Sheep Template'
-        // We assume this template was created by supabase/migrations/013_parametric_skins.sql.
-        const { data: masterSkin } = await supabase
-            .from('sheep_skins')
-            .select('id')
-            .eq('name', 'Standard Sheep Template')
-            .single();
-
-        if (masterSkin) return masterSkin.id;
-
-        // Fallback: This should technically not happen if V13 ran.
-        // We return null to avoid creating junk data.
+        // V13 Pivot: Table deleted by user.
+        // Return null as we cannot lookup templates.
         return null;
     },
 

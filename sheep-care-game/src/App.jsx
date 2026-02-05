@@ -8,9 +8,7 @@ import { Login } from './components/Login';
 import { NicknameSetup } from './components/NicknameSetup';
 import { SheepList } from './components/SheepList';
 import { SettingsModal } from './components/SettingsModal';
-import { SkinManager } from './components/SkinManager';
 import { UserProfile } from './components/UserProfile';
-import { AdminWeatherControl } from './components/AdminWeatherControl';
 import './App.css';
 
 import { AssetPreloader } from './components/AssetPreloader';
@@ -22,7 +20,6 @@ function App() {
   const [showGuide, setShowGuide] = useState(false);
   // showList removed - permanent dock
   const [showSettings, setShowSettings] = useState(false);
-  const [showSkinManager, setShowSkinManager] = useState(false);
   const [isHudMenuOpen, setIsHudMenuOpen] = useState(false);
 
   // Reset state when user changes
@@ -30,7 +27,6 @@ function App() {
     setSelectedSheepId(null);
     setShowGuide(false);
     setShowSettings(false);
-    setShowSkinManager(false);
   }, [currentUser]);
 
   // 0. Global Loading (Use AssetPreloader for consistency)
@@ -63,8 +59,7 @@ function App() {
 
       {/* --- Unified Top Left Widget --- */}
       <UserProfile />
-      {/* Weather Control temporarily retired */}
-      {false && <AdminWeatherControl />}
+
 
       {/* --- HUD: Top Right System Buttons (Lucide icons) --- */}
       <div className="hud-right">
@@ -125,19 +120,7 @@ function App() {
           </button>
 
           {/* Skin Manager button hidden – not in use anymore */}
-          {false && isAdmin && (
-            <button
-              className="hud-btn"
-              style={{ background: '#e3f2fd', border: '1px solid #90caf9' }}
-              onClick={() => {
-                setShowSkinManager(true);
-                setIsHudMenuOpen(false);
-              }}
-              title="皮膚管理"
-            >
-              🎨
-            </button>
-          )}
+
         </div>
       </div>
 
@@ -163,10 +146,6 @@ function App() {
 
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
-      )}
-
-      {showSkinManager && (
-        <SkinManager onClose={() => setShowSkinManager(false)} />
       )}
 
       {showIntroVideo && (
