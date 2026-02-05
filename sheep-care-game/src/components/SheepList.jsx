@@ -6,7 +6,7 @@ import { isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { AssetSheep } from './AssetSheep';
 import { AddSheepModal } from './AddSheepModal';
 import { TagManagerModal } from './TagManagerModal';
-import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal, X } from 'lucide-react';
 import '../styles/design-tokens.css';
 import './SheepList.css';
 
@@ -87,12 +87,22 @@ const FilterSettingsMenu = ({ filters, hiddenFilterIds, onToggle, onManageTags, 
             }}
         >
             <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <div className="filter-settings-header">
+                    <span>顯示篩選</span>
+                    <button
+                        type="button"
+                        className="filter-settings-close-btn"
+                        onClick={onClose}
+                        aria-label="關閉篩選設定"
+                    >
+                        <X size={16} strokeWidth={2.5} />
+                    </button>
+                </div>
                 <div
                     ref={scrollRef}
                     onScroll={checkScrollState}
-                    style={{ padding: '12px 12px 0', flex: 1, minHeight: 0, overflowY: 'auto' }}
+                    style={{ padding: '0 12px 0', flex: 1, minHeight: 0, overflowY: 'auto' }}
                 >
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '10px', color: '#666' }}>顯示篩選</div>
                 {filters.map((f) => {
                     const isHidden = hiddenFilterIds.has(f.id);
                     return (
