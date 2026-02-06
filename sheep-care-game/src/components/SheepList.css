@@ -39,6 +39,68 @@
   transform: scale(0.95);
 }
 
+/* Pin/unpin feedback: visible highlight pulse */
+.sheep-card--pin-flash {
+  animation: sheep-card-pin-flash 0.5s ease;
+}
+
+@keyframes sheep-card-pin-flash {
+  0% {
+    box-shadow: var(--card-inner-shadow);
+    transform: scale(1);
+  }
+  40% {
+    box-shadow: 0 0 0 4px var(--palette-blue-action), 0 0 16px color-mix(in srgb, var(--palette-blue-action) 50%, transparent), var(--card-inner-shadow);
+    transform: scale(1.04);
+  }
+  100% {
+    box-shadow: var(--card-inner-shadow);
+    transform: scale(1);
+  }
+}
+
+/* Reorder: smooth position transition for card wrapper */
+.dock-scroll-area > div {
+  transition: transform 0.25s ease;
+}
+
+/* Unpin placeholder: gap collapse animation */
+.sheep-card-placeholder {
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+  animation: placeholder-collapse 0.3s ease forwards;
+}
+
+@keyframes placeholder-collapse {
+  from {
+    width: var(--ph-width, 0);
+  }
+  to {
+    width: 0;
+    min-width: 0;
+  }
+}
+
+/* Reduced motion: disable animations, use static highlight only */
+@media (prefers-reduced-motion: reduce) {
+  .sheep-card--pin-flash {
+    animation: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--palette-blue-action) 30%, transparent), var(--card-inner-shadow);
+  }
+
+  .dock-scroll-area > div {
+    transition: none;
+  }
+
+  .sheep-card-placeholder {
+    animation: none;
+    width: 0;
+    min-width: 0;
+  }
+}
+
 /* Selection indicator */
 .sheep-card-selection-dot {
   position: absolute;
