@@ -299,6 +299,11 @@
     animation: dashMove 180s ease-in-out infinite;
 }
 
+/* Night theme: boost path contrast using design token */
+[data-theme='night'] .map-path-line {
+    stroke: var(--palette-pale-blue);
+}
+
 @keyframes dashMove {
     to {
         stroke-dashoffset: -1000;
