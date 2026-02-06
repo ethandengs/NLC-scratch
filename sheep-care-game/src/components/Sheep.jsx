@@ -3,7 +3,7 @@ import { AssetSheep } from './AssetSheep';
 import { isSleeping } from '../utils/gameLogic';
 import { SHEEP_TYPES } from '../data/sheepData';
 
-export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
+export const Sheep = React.memo(({ sheep, onPray, onSelect, alwaysShowName }) => {
     const isGolden = sheep.type === 'GOLDEN';
     const [showName, setShowName] = React.useState(false);
 
@@ -20,7 +20,7 @@ export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
     // Fix Scale: 0.6 + (y / 200). (At 0 -> 0.6. At 100 -> 1.1)
 
     const depthScale = 1.1 - ((sheep.y || 0) / 200);
-    const zIdx = sheep.zIndex !== undefined ? sheep.zIndex : Math.floor(1000 - (sheep.y || 0));
+    const zIdx = alwaysShowName ? 10000 : (sheep.zIndex !== undefined ? sheep.zIndex : Math.floor(1000 - (sheep.y || 0)));
 
     const handleInteract = (e) => {
         e.preventDefault();
@@ -53,11 +53,11 @@ export const Sheep = React.memo(({ sheep, onPray, onSelect }) => {
                 transformOrigin: 'bottom center'
             }}
         >
-            {/* Name Tag - Only Show when toggled */}
-            {showName && (
+            {/* Name Tag - Only Show when toggled or forced */}
+            {(showName || alwaysShowName) && (
                 <div className="sheep-name-tag" style={{
                     position: 'absolute',
-                    top: '0px', // Closer to head
+                    bottom: '-25px', // At the feet
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 100,
