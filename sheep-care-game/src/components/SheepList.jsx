@@ -226,7 +226,7 @@ const useLongPress = (onLongPress, onClick, { shouldPreventDefault = true, delay
     };
 };
 
-const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isSleepingState, isSick, isPinned, onTogglePin, onLongPress, tags = [], tagAssignmentsBySheep = {} }) => {
+const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isSleepingState, isSick, isPinned, onTogglePin, onLongPress, tags = [], tagAssignmentsBySheep = {}, pinFlashId }) => {
     const assigned = (tagAssignmentsBySheep[s.id] || []);
     const firstTagId = assigned.length > 0 ? assigned[0].tagId : null;
     const firstTag = firstTagId ? tags.find(t => t.id === firstTagId) : null;
@@ -247,9 +247,11 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
     // Use the hook
     const longPressEventHandlers = useLongPress(handleCardLongPress, handleCardClick, { delay: 500 });
 
+    const isPinFlash = pinFlashId === s.id;
+
     return (
         <div
-            className={`sheep-card ${isSelectionMode && isSelected ? 'selected' : ''} ${isSelectionMode ? 'sheep-card--select-mode' : ''}`}
+            className={`sheep-card ${isSelectionMode && isSelected ? 'selected' : ''} ${isSelectionMode ? 'sheep-card--select-mode' : ''} ${isPinFlash ? 'sheep-card--pin-flash' : ''}`}
             {...longPressEventHandlers}
             style={{ touchAction: 'manipulation', userSelect: 'none' }} // 'manipulation' allows scroll but blocks double-tap zoom
         >
@@ -353,9 +355,17 @@ export const SheepList = ({ onSelect }) => {
     const filterMenuAnchorRef = useRef(null);
     const searchWrapRef = useRef(null);
     const searchInputRef = useRef(null);
+    const scrollAreaRef = useRef(null);
+    const cardRefs = useRef({});
+    const lastPinActionRef = useRef(null);
+    const pendingPinIdRef = useRef(null);
 
     // Collapsible State (Default Open)
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [pinFlashId, setPinFlashId] = useState(null);
+    const [unpinPlaceholder, setUnpinPlaceholder] = useState(null);
+
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -367,6 +377,7 @@ export const SheepList = ({ onSelect }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
 
     const toggleFilterVisibility = (filterId) => {
         const next = new Set(hiddenFilterIds);
@@ -397,6 +408,63 @@ export const SheepList = ({ onSelect }) => {
         }
         return true;
     }), [sortedSheep, searchTerm, effectiveFilterStatus, settings?.pinnedSheepIds, tagAssignmentsBySheep]);
+
+    const pinFlashTimeoutRef = useRef(null);
+    const handleTogglePin = useCallback((id) => {
+        if (!togglePin) return;
+        const wasPinned = settings?.pinnedSheepIds?.includes(id);
+        const idx = filteredSheep.findIndex((s) => s.id === id);
+        const wrapperEl = cardRefs.current[id];
+
+        if (wasPinned && idx >= 0 && wrapperEl && !prefersReducedMotion) {
+            const width = wrapperEl.offsetWidth + 12;
+            togglePin(id);
+            lastPinActionRef.current = 'unpin';
+            setUnpinPlaceholder({ index: idx, width, id });
+            setPinFlashId(id);
+            if (pinFlashTimeoutRef.current) clearTimeout(pinFlashTimeoutRef.current);
+            pinFlashTimeoutRef.current = setTimeout(() => {
+                setPinFlashId(null);
+                setUnpinPlaceholder(null);
+                pinFlashTimeoutRef.current = null;
+            }, 320);
+        } else {
+            togglePin(id);
+            lastPinActionRef.current = 'pin';
+            pendingPinIdRef.current = id;
+        }
+    }, [togglePin, settings?.pinnedSheepIds, filteredSheep, prefersReducedMotion]);
+
+    useEffect(() => {
+        const pendingId = pendingPinIdRef.current;
+        if (!pendingId || lastPinActionRef.current !== 'pin') return;
+        pendingPinIdRef.current = null;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setPinFlashId(pendingId);
+                if (pinFlashTimeoutRef.current) clearTimeout(pinFlashTimeoutRef.current);
+                pinFlashTimeoutRef.current = setTimeout(() => {
+                    setPinFlashId(null);
+                    pinFlashTimeoutRef.current = null;
+                }, 400);
+            });
+        });
+    }, [filteredSheep]);
+
+    useEffect(() => {
+        if (!pinFlashId || lastPinActionRef.current !== 'pin' || prefersReducedMotion) return;
+        const scrollEl = scrollAreaRef.current;
+        const cardEl = cardRefs.current[pinFlashId];
+        if (!scrollEl || !cardEl) return;
+        requestAnimationFrame(() => {
+            const cardRect = cardEl.getBoundingClientRect();
+            const scrollRect = scrollEl.getBoundingClientRect();
+            const cardCenter = cardRect.left - scrollRect.left + scrollEl.scrollLeft + cardRect.width / 2;
+            const scrollCenter = scrollEl.clientWidth / 2;
+            scrollEl.scrollTo({ left: cardCenter - scrollCenter, behavior: 'smooth' });
+        });
+        lastPinActionRef.current = null;
+    }, [pinFlashId, filteredSheep, prefersReducedMotion]);
 
     const counts = useMemo(() => {
         const acc = { ALL: sortedSheep.length, HEALTHY: 0, SICK: 0, SLEEPING: 0, PINNED: 0 };
@@ -775,46 +843,80 @@ export const SheepList = ({ onSelect }) => {
                     }}
                 >
                     {/* Horizontal Scroll List */}
-                    <div className="dock-scroll-area" style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'flex-end',
-                        gap: '12px', // Slightly reduced gap
-                        padding: '10px 16px 12px 16px', // Adjusted padding
-                        overflowX: 'auto',
-                        overflowY: 'hidden',
-                        scrollBehavior: 'smooth',
-                        pointerEvents: 'auto',
-                        height: '100%' // Ensure it fills the wrapper
-                    }}>
-                        {filteredSheep.map(s => (
-                            <div key={s.id} style={{
-                                width: 'max-content',
-                                minWidth: 'max-content',
-                                height: '100%',
-                                paddingBottom: '5px',
-                                pointerEvents: 'auto'
-                            }}>
-                                <SheepCard
-                                    s={s}
-                                    isSelectionMode={isSelectionMode}
-                                    isSelected={selectedIds.has(s.id)}
-                                    isPinned={settings?.pinnedSheepIds?.includes(s.id)}
-                                    onTogglePin={() => togglePin && togglePin(s.id)}
-                                    onSelect={(sheep) => { if (onSelect) onSelect(sheep); }}
-                                    onToggleSelect={toggleSelection}
-                                    onLongPress={handleLongPress}
-                                    isSleepingState={isSleeping(s)}
-                                    isSick={s.status === 'sick'}
-                                    tags={tags}
-                                    tagAssignmentsBySheep={tagAssignmentsBySheep}
-                                />
-                            </div>
-                        ))}
-
-
-                        {filteredSheep.length === 0 && (
+                    <div
+                        ref={scrollAreaRef}
+                        className="dock-scroll-area"
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'flex-end',
+                            gap: '12px',
+                            padding: '10px 16px 12px 16px',
+                            overflowX: 'auto',
+                            overflowY: 'hidden',
+                            scrollBehavior: 'smooth',
+                            pointerEvents: 'auto',
+                            height: '100%'
+                        }}
+                    >
+                        {(() => {
+                            const items = [];
+                            const ph = unpinPlaceholder;
+                            filteredSheep.forEach((s, i) => {
+                                if (ph && ph.index === i) {
+                                    items.push(
+                                        <div
+                                            key={`placeholder-${ph.id}`}
+                                            className="sheep-card-placeholder"
+                                            style={{ '--ph-width': `${ph.width}px` }}
+                                            aria-hidden="true"
+                                        />
+                                    );
+                                }
+                                items.push(
+                                    <div
+                                        key={s.id}
+                                        ref={(el) => { if (el) cardRefs.current[s.id] = el; }}
+                                        style={{
+                                            width: 'max-content',
+                                            minWidth: 'max-content',
+                                            height: '100%',
+                                            paddingBottom: '5px',
+                                            pointerEvents: 'auto'
+                                        }}
+                                    >
+                                        <SheepCard
+                                            s={s}
+                                            isSelectionMode={isSelectionMode}
+                                            isSelected={selectedIds.has(s.id)}
+                                            isPinned={settings?.pinnedSheepIds?.includes(s.id)}
+                                            onTogglePin={handleTogglePin}
+                                            pinFlashId={pinFlashId}
+                                            onSelect={(sheep) => { if (onSelect) onSelect(sheep); }}
+                                            onToggleSelect={toggleSelection}
+                                            onLongPress={handleLongPress}
+                                            isSleepingState={isSleeping(s)}
+                                            isSick={s.status === 'sick'}
+                                            tags={tags}
+                                            tagAssignmentsBySheep={tagAssignmentsBySheep}
+                                        />
+                                    </div>
+                                );
+                            });
+                            if (ph && ph.index === filteredSheep.length) {
+                                items.push(
+                                    <div
+                                        key={`placeholder-${ph.id}`}
+                                        className="sheep-card-placeholder"
+                                        style={{ '--ph-width': `${ph.width}px` }}
+                                        aria-hidden="true"
+                                    />
+                                );
+                            }
+                            return items;
+                        })()}
+                        {filteredSheep.length === 0 && !unpinPlaceholder && (
                             <div style={{ color: 'rgba(0,0,0,0.5)', padding: '20px', fontWeight: 'bold' }}>沒有小羊...</div>
                         )}
                     </div>
