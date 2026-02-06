@@ -30,6 +30,9 @@ const defaultGameContext = {
     updateTag: () => null,
     deleteTag: () => false,
     setSheepTags: () => false,
+    focusedSheepId: null,
+    callSheep: () => { },
+    clearFocus: () => { },
 };
 
 const GameContext = createContext(defaultGameContext);
@@ -79,7 +82,34 @@ export const GameProvider = ({ children }) => {
     const [tags, setTags] = useState([]);
     const [tagAssignmentsBySheep, setTagAssignmentsBySheep] = useState({});
 
+    // Focusing / Calling Logic
+    const [focusedSheepId, setFocusedSheepId] = useState(null);
 
+    const callSheep = (id) => {
+        setFocusedSheepId(id);
+
+        // Visual Response
+        setSheep(prev => prev.map(s => {
+            if (s.id === id) {
+                return { ...s, message: "咩～！" };
+            }
+            return s;
+        }));
+
+        // Clear message after delay
+        setTimeout(() => {
+            setSheep(prev => prev.map(s => {
+                if (s.id === id && s.message === "咩～！") {
+                    return { ...s, message: null };
+                }
+                return s;
+            }));
+        }, 3000);
+    };
+
+    const clearFocus = () => {
+        setFocusedSheepId(null);
+    };
 
 
     // --- SETTINGS (Device Specific) ---
@@ -555,7 +585,7 @@ export const GameProvider = ({ children }) => {
 
     // Ref Sync: Keep Ref up to date for saveToCloud and handleUnload (async access)
     useEffect(() => {
-        stateRef.current = { sheep, inventory, settings, nickname, currentUser, userAvatarUrl, introWatched };
+        stateRef.current = { sheep, inventory, settings, nickname, currentUser, userAvatarUrl, introWatched, focusedSheepId };
         lastSaveTimeRef.current = Date.now(); // Optional: track local changes? No, unsafe.
     }, [sheep, inventory, settings, nickname, currentUser, userAvatarUrl, introWatched]);
 
@@ -859,7 +889,10 @@ export const GameProvider = ({ children }) => {
             createTag,
             updateTag,
             deleteTag,
-            setSheepTags
+            setSheepTags,
+            focusedSheepId,
+            callSheep,
+            clearFocus
         }}>
             {children}
         </GameContext.Provider>

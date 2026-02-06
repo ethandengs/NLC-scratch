@@ -6,7 +6,7 @@ import { isSleeping, getAwakeningProgress } from '../utils/gameLogic';
 import { AssetSheep } from './AssetSheep';
 import { AddSheepModal } from './AddSheepModal';
 import { TagManagerModal } from './TagManagerModal';
-import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal, Search } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, CheckSquare, SlidersHorizontal, Search, Megaphone } from 'lucide-react';
 import { CloseButton } from './ui/CloseButton';
 import { Checkbox } from './ui/Checkbox';
 import '../styles/design-tokens.css';
@@ -98,39 +98,39 @@ const FilterSettingsMenu = ({ filters, hiddenFilterIds, onToggle, onManageTags, 
                     onScroll={checkScrollState}
                     style={{ padding: '0 12px 0', flex: 1, minHeight: 0, overflowY: 'auto' }}
                 >
-                {filters.map((f) => {
-                    const isHidden = hiddenFilterIds.has(f.id);
-                    return (
-                        <label
-                            key={f.id}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '6px 0',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem'
-                            }}
-                        >
-                            <Checkbox
-                                checked={!isHidden}
-                                onChange={() => onToggle(f.id)}
-                                ariaLabel={f.label}
-                            />
-                            {f.color ? (
-                                <span
-                                    style={{
-                                        width: 10,
-                                        height: 10,
-                                        borderRadius: 4,
-                                        background: f.color
-                                    }}
+                    {filters.map((f) => {
+                        const isHidden = hiddenFilterIds.has(f.id);
+                        return (
+                            <label
+                                key={f.id}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '6px 0',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                <Checkbox
+                                    checked={!isHidden}
+                                    onChange={() => onToggle(f.id)}
+                                    ariaLabel={f.label}
                                 />
-                            ) : null}
-                            <span>{f.label}</span>
-                        </label>
-                    );
-                })}
+                                {f.color ? (
+                                    <span
+                                        style={{
+                                            width: 10,
+                                            height: 10,
+                                            borderRadius: 4,
+                                            background: f.color
+                                        }}
+                                    />
+                                ) : null}
+                                <span>{f.label}</span>
+                            </label>
+                        );
+                    })}
                 </div>
                 {showFadeOverlay && (
                     <div
@@ -226,7 +226,7 @@ const useLongPress = (onLongPress, onClick, { shouldPreventDefault = true, delay
     };
 };
 
-const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isSleepingState, isSick, isPinned, onTogglePin, onLongPress, tags = [], tagAssignmentsBySheep = {}, pinFlashId }) => {
+const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, isSleepingState, isSick, isPinned, onTogglePin, onCall, onLongPress, tags = [], tagAssignmentsBySheep = {}, pinFlashId }) => {
     const assigned = (tagAssignmentsBySheep[s.id] || []);
     const firstTagId = assigned.length > 0 ? assigned[0].tagId : null;
     const firstTag = firstTagId ? tags.find(t => t.id === firstTagId) : null;
@@ -272,7 +272,33 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                 >
                     {tagLabel}
                 </div>
-                <div className="sheep-card-header-actions">
+                <div className="sheep-card-header-actions" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    {!isSelectionMode && onCall && !isSleepingState && (
+                        <button
+                            type="button"
+                            className="pin-btn"
+                            title="呼叫"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onCall(s.id);
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onMouseUp={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchEnd={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onPointerUp={(e) => e.stopPropagation()}
+                            style={{
+                                background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                                fontSize: '1rem',
+                                opacity: 0.6,
+                                position: 'static'
+                            }}
+                        >
+                            <Megaphone size={16} strokeWidth={2.5} />
+                        </button>
+                    )}
                     {!isSelectionMode && onTogglePin && (
                         <button
                             type="button"
@@ -293,7 +319,8 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
                                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
                                 opacity: isPinned ? 1 : 0.2,
                                 fontSize: '1rem',
-                                transition: 'transform 0.2s, opacity 0.2s'
+                                transition: 'transform 0.2s, opacity 0.2s',
+                                position: 'static'
                             }}
                         >
                             📌
@@ -331,7 +358,7 @@ const SheepCard = ({ s, isSelectionMode, isSelected, onSelect, onToggleSelect, i
 
 // --- Main List Component ---
 export const SheepList = ({ onSelect }) => {
-    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep, settings, togglePin, tags, tagAssignmentsBySheep, updateSetting } = useGame();
+    const { sheep, deleteMultipleSheep, updateSheep, adoptSheep, updateMultipleSheep, settings, togglePin, callSheep, tags, tagAssignmentsBySheep, updateSetting } = useGame();
     const confirm = useConfirm();
     const pinnedSet = useMemo(() => new Set(settings?.pinnedSheepIds || []), [settings?.pinnedSheepIds]);
     const sortedSheep = useMemo(() => {
@@ -366,6 +393,14 @@ export const SheepList = ({ onSelect }) => {
     const [unpinPlaceholder, setUnpinPlaceholder] = useState(null);
 
     const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Auto-collapse when focusing on a sheep
+    const { focusedSheepId } = useGame();
+    useEffect(() => {
+        if (focusedSheepId) {
+            setIsCollapsed(true);
+        }
+    }, [focusedSheepId]);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -764,19 +799,19 @@ export const SheepList = ({ onSelect }) => {
                                 ]
                                     .filter(f => !hiddenFilterIds.has(f.id))
                                     .map(f => (
-                                    <button
-                                        type="button"
-                                        key={f.id}
-                                        className={`dock-toolbar-chip ${effectiveFilterStatus === f.id ? 'dock-toolbar-chip--selected' : ''}`}
-                                        onClick={() => setFilterStatus(f.id)}
-                                        style={{
-                                            opacity: isCollapsed ? 0.6 : 1,
-                                            ...(f.color && effectiveFilterStatus === f.id && { borderColor: f.color, color: '#fff', background: f.color })
-                                        }}
-                                    >
-                                        {f.label} {counts[f.id] ?? 0}
-                                    </button>
-                                ))}
+                                        <button
+                                            type="button"
+                                            key={f.id}
+                                            className={`dock-toolbar-chip ${effectiveFilterStatus === f.id ? 'dock-toolbar-chip--selected' : ''}`}
+                                            onClick={() => setFilterStatus(f.id)}
+                                            style={{
+                                                opacity: isCollapsed ? 0.6 : 1,
+                                                ...(f.color && effectiveFilterStatus === f.id && { borderColor: f.color, color: '#fff', background: f.color })
+                                            }}
+                                        >
+                                            {f.label} {counts[f.id] ?? 0}
+                                        </button>
+                                    ))}
 
                                 {/* 4. Filter Settings */}
                                 <div style={{ position: 'relative', display: 'inline-flex' }} ref={filterMenuAnchorRef}>
@@ -901,6 +936,7 @@ export const SheepList = ({ onSelect }) => {
                                             isSick={s.status === 'sick'}
                                             tags={tags}
                                             tagAssignmentsBySheep={tagAssignmentsBySheep}
+                                            onCall={callSheep}
                                         />
                                     </div>
                                 );

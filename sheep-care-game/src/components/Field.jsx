@@ -7,7 +7,7 @@ import { AssetBackground } from './AssetBackground';
 import { AssetPreloader } from './AssetPreloader';
 
 export const Field = ({ onSelectSheep }) => {
-    const { sheep, prayForSheep, weather, settings, user } = useGame();
+    const { sheep, prayForSheep, weather, settings, focusedSheepId, clearFocus, lineId } = useGame();
     const [isLoaded, setIsLoaded] = useState(false);
 
     // --- 1. Separate Sheep ---
@@ -101,6 +101,69 @@ export const Field = ({ onSelectSheep }) => {
     }, [visibleSleeping]);
 
 
+
+    // --- 4. Focus / Zoom Logic ---
+    const focusedSheep = useMemo(() => {
+        return sheep.find(s => s.id === focusedSheepId);
+    }, [sheep, focusedSheepId]);
+
+    // Force visibility of focused sheep
+    const finalVisibleLiving = useMemo(() => {
+        if (!focusedSheepId) return visibleLiving;
+        // If focused sheep is already visible, return as is
+        if (visibleLiving.find(s => s.id === focusedSheepId)) return visibleLiving;
+        // If not, add it (temporarily exceed max count if needed)
+        const target = sheep.find(s => s.id === focusedSheepId);
+        if (target && !isSleeping(target)) {
+            return [...visibleLiving, target];
+        }
+        return visibleLiving;
+    }, [visibleLiving, focusedSheepId, sheep]);
+
+    // Calculate Zoom Transform
+    const fieldStyle = useMemo(() => {
+        if (focusedSheepId) {
+            const target = sheep.find(s => s.id === focusedSheepId);
+            if (target) {
+                // Zoom in on target (Scale 2x)
+                // Origin Calculation:
+                // We want the sheep to be in the CENTER of the screen.
+                // Default sheep position: left: x%, bottom: bottomPos%
+                // We need to translate the field so the sheep's point moves to center.
+
+                // Current Sheep Center in %:
+                const sx = target.x; // 0-100
+                // bottomPos logic from Sheep.jsx:
+                const sy = (target.y || 0) * 0.95; // 0-100 (bottom relative)
+
+                // Zoom level
+                const scale = 2.5;
+
+                // Transform Origin: Center (50% 50%) is easiest if we use translate.
+                // T = (Center - SheepPos) * Scale? No.
+                // Let's use standard CSS transform.
+                // translate( (50 - sx)%, (sy - 50)% ) ? No, Y is bottom.
+                // Center Y is 50%. Sheep Y is sy%.
+                // We want to move (50 - sx)% horizontally.
+                // We want to move (50 - sy)% vertically (relative to bottom).
+                // And then Scale.
+
+                return {
+                    transform: `scale(${scale}) translate(${(50 - sx)}%, ${(50 - sy)}%)`,
+                    transformOrigin: '50% 50%', // Zoom relative to center, but we are translating the whole world relative to center?
+                    // Actually, if we translate first then scale:
+                    // translate moves the point (sx, sy) to (50, 50).
+                    // scale zooms in at (50, 50).
+                    transition: 'transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                };
+            }
+        }
+        return {
+            transform: 'scale(1) translate(0%, 0%)',
+            transition: 'transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        };
+    }, [focusedSheepId, sheep]);
+
     if (!isLoaded) {
         return <AssetPreloader onLoaded={() => setIsLoaded(true)} />;
     }
@@ -109,37 +172,49 @@ export const Field = ({ onSelectSheep }) => {
         <div className={`field-container`}
             style={{
                 position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden',
-                // Disable browser default touch actions for game feel
                 touchAction: 'none'
+            }}
+            onClick={() => {
+                if (focusedSheepId) clearFocus();
             }}
         >
             {/* New Asset Background (Handles Scene, Weather, Decor) */}
-            <AssetBackground userId={user?.id || 'guest'} weather={weather} />
+            <div style={{
+                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                ...fieldStyle
+            }}>
+                <AssetBackground userId={lineId || 'guest'} weather={weather} />
 
-            {/* Render Sheep Layer (Living + Ghosts) */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                {/* Render Sheep Layer (Living + Ghosts) */}
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
 
-                {/* 1. Ghosts (Floaty) */}
-                {ghostSheep.map(s => (
-                    // Re-enable pointer events for sheep
-                    <div key={s.id} style={{ pointerEvents: 'auto' }}>
-                        <Sheep sheep={s} onPray={prayForSheep} onSelect={onSelectSheep} />
-                    </div>
-                ))}
+                    {/* 1. Ghosts (Floaty) */}
+                    {ghostSheep.map(s => (
+                        // Re-enable pointer events for sheep
+                        <div key={s.id} style={{ pointerEvents: 'auto' }}>
+                            <Sheep sheep={s} onPray={prayForSheep} onSelect={onSelectSheep} />
+                        </div>
+                    ))}
 
-                {/* 2. Living Sheep (Grounded) */}
-                {visibleLiving.map(s => (
-                    <div key={s.id} style={{ pointerEvents: 'auto' }}>
-                        <Sheep sheep={s} onPray={prayForSheep} onSelect={onSelectSheep} />
-                    </div>
-                ))}
+                    {/* 2. Living Sheep (Grounded) */}
+                    {finalVisibleLiving.map(s => (
+                        <div key={s.id} style={{ pointerEvents: 'auto' }}>
+                            <Sheep
+                                sheep={s}
+                                onPray={prayForSheep}
+                                onSelect={onSelectSheep}
+                                alwaysShowName={s.id === focusedSheepId}
+                            />
+                        </div>
+                    ))}
 
+                </div>
             </div>
 
             {/* Message / HUD Overlay usually goes here via App.jsx, but if Field owns some: */}
 
             {/* Count Overlay: Show if Total Sheep > Currently Shown */}
-            {sheep.length > visibleIds.size && (
+            {sheep.length > visibleIds.size && !focusedSheepId && (
                 <div style={{
                     position: 'absolute', top: '80px', right: '10px',
                     background: 'var(--color-primary-cream)', color: 'var(--color-text-brown)',
@@ -150,6 +225,19 @@ export const Field = ({ onSelectSheep }) => {
                 }}>
                     <Eye size={14} strokeWidth={2} style={{ opacity: 0.8 }} />
                     {visibleIds.size} / {sheep.length}
+                </div>
+            )}
+
+            {/* Call Focus Overlay Cancel Hint */}
+            {focusedSheepId && (
+                <div style={{
+                    position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(0,0,0,0.4)', color: '#fff',
+                    padding: '8px 16px', borderRadius: '20px',
+                    fontSize: '0.85rem', pointerEvents: 'none', zIndex: 600,
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    點擊畫面任意處取消鎖定
                 </div>
             )}
 
